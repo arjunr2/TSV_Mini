@@ -1,0 +1,6 @@
+[submodule "wasm-instrument"]
+	path = wasm-instrument
+	url = https://github.com/arjunr2/wasm-instrument
+[submodule "wasm-micro-runtime"]
+	path = wasm-micro-runtime
+	url = https://github.com/SilverLineFramework/wasm-micro-runtime
