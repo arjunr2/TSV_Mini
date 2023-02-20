@@ -4,6 +4,7 @@ shopt -s expand_aliases
 source ~/.alias
 
 WAMR_ROOT=/home/arjun/Documents/research/arena/wamr-conix
+WAMRC=$WAMR_ROOT/wamr-compiler/build/wamrc
 
 name=$(basename $1 .c)
 
@@ -23,3 +24,8 @@ name=$(basename $1 .c)
 # -Wl,--export=__wasm_call_ctors: export the init function to initialize the passive data segments
 
 wasm2wat --enable-threads $name.wasm -o $name.wat
+$WAMRC --enable-multi-thread -o $name.aot $name.wasm
+
+./instrument -o out.wasm $name.wasm
+$WAMRC --enable-multi-thread -o out.aot out.wasm
+

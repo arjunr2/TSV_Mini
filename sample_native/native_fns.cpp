@@ -3,6 +3,7 @@
 #include "wasm_export.h"
 
 #include <map>
+#include <mutex>
 
 struct acc_entry {
   wasm_exec_env_t last_tid;
@@ -12,14 +13,17 @@ struct acc_entry {
 };
 
 std::map<uint32_t, acc_entry> access_table;
+std::mutex mtx;
 
 void logaccess_wrapper(wasm_exec_env_t exec_env, uint32_t addr, uint32_t opcode) {
+  mtx.lock();
   acc_entry &entry = access_table[addr];
   if (entry.last_tid && (exec_env != entry.last_tid)) {
     entry.shared = true;
   }
   entry.last_tid = exec_env;
   entry.freq += 1;
+  mtx.unlock();
 }
 
 void logend_wrapper(wasm_exec_env_t exec_env) {
