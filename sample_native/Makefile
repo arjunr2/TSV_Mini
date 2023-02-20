@@ -1,8 +1,8 @@
-.PHONY: all clean
+.PHONY: clean
 
-all:
-	g++ -c -fPIC native_fns.cpp -o native_fns.o
-	g++ -shared -o libnative.so native_fns.o
+native_fns.o: native_fns.cpp
+	g++ -c -fPIC $< -o $@
+	g++ -shared -o libnative.so $@
 	
 clean:
 	rm *.o *.so
