@@ -5,4 +5,4 @@ native_fns.o: native_fns.cpp
 	g++ -shared -o libnative.so $@
 	
 clean:
-	rm *.o *.so
+	rm -f *.o *.so
