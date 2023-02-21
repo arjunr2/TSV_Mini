@@ -10,8 +10,12 @@ WASM_DIR := wasms
 AOT_DIR := aots
 
 TEST_C := $(notdir $(wildcard $(TEST_DIR)/*.c))
+
 WASM_O := $(addprefix $(WASM_DIR)/, $(TEST_C:.c=.wasm))
-AOT_O := $(addprefix $(AOT_DIR)/, $(TEST_C:.c=.aot))
+
+AARCH64_AOT_O := $(TEST_C:.c=.aarch64.aot)
+X86_64_AOT_O := $(TEST_C:.c=.aot)
+AOT_O := $(addprefix $(AOT_DIR)/, $(X86_64_AOT_O) $(AARCH64_AOT_O))
 
 
 NATIVE_DIR := sample_native
@@ -24,7 +28,7 @@ tdirs:
 	mkdir -p $(AOT_DIR)
 
 instrument:
-	make -j4 -C $(INSTRUMENT_DIR)
+	make -j6 -C $(INSTRUMENT_DIR)
 	cp $(INSTRUMENT_DIR)/instrument .
 
 native-lib:
@@ -33,12 +37,23 @@ native-lib:
 
 
 tests: tdirs $(AOT_O)
+	@echo "AOTs: $(AOT_O)"
 
+# AOT Compilation 
+.ONESHELL:
 $(AOT_DIR)/%.aot: $(WASM_DIR)/%.wasm
 	$(WAMRC) --enable-multi-thread -o $@ $<
 	$(WAMRC) --enable-multi-thread -o $@.inst $<.inst
 
+.ONESHELL:
+$(AOT_DIR)/%.aarch64.aot: $(WASM_DIR)/%.wasm
+	$(WAMRC) --target=aarch64 --enable-multi-thread -o $@ $<
+	$(WAMRC) --target=aarch64 --enable-multi-thread -o $@.inst $<.inst
+
+
+# WASM Instrumentation + Compilation
 .SECONDARY: $(WASM_O)
+.ONESHELL:
 $(WASM_DIR)/%.wasm: $(TEST_DIR)/%.c instrument
 	$(WASI_CLANG) --target=wasm32  \
 			--sysroot=$(WAMR_ROOT)/wamr-sdk/app/libc-builtin-sysroot   \
