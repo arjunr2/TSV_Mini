@@ -37,7 +37,6 @@ native-lib:
 
 
 tests: tdirs $(AOT_O)
-	@echo "AOTs: $(AOT_O)"
 
 # AOT Compilation 
 .ONESHELL:
