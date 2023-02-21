@@ -3,3 +3,5 @@
 *.aot
 *.so
 *.o
+*.aots
+*.wasms

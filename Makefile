@@ -51,6 +51,7 @@ $(WASM_DIR)/%.wasm: $(TEST_DIR)/%.c instrument
 			$< -o $@
 	./instrument -o $@.inst $@
 	wasm2wat --enable-threads $@ -o $(WASM_DIR)/$*.wat
+	wasm2wat --enable-threads $@.inst -o $(WASM_DIR)/$*.wat.inst
 
 
 clean-tests:

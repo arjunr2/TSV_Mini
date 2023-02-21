@@ -4,16 +4,18 @@
 #include <pthread.h>
 
 #define NUM_THREADS 2
-#define N 34000
+#define N 200000
 
 uint64_t fibonacci[2] = {1, 0};
 int num_ct = 1;
+volatile int p = 0;
 
 void *fib_thread(void *arg) {
   int tnum = *((int*)arg);
   int i = 0;
   while (num_ct < N) {
-    printf("Thread %d | Current Result: %llu\n", tnum, fibonacci[0]);
+    p += tnum;
+    //printf("Thread %d | Current Result: %llu\n", tnum, fibonacci[0]);
     uint64_t f1 = fibonacci[1];
     fibonacci[1] = fibonacci[0];
     fibonacci[0] += f1;
@@ -34,7 +36,7 @@ int main() {
     result = fibonacci[0];
   }
   else {
-    printf("Spawning %d fib threads to compute FIB(%d)\n", NUM_THREADS, N);
+    //printf("Spawning %d fib threads to compute FIB(%d)\n", NUM_THREADS, N);
     for (int i = 0; i < NUM_THREADS; i++) {
       if (pthread_create(&tid[i], NULL, fib_thread, &i)) {
         printf("Failed to create thread\n");
@@ -49,11 +51,12 @@ int main() {
       }
     }
 
-    printf("Joined threads successfully!\n");
+    //printf("Joined threads successfully!\n");
     result = fibonacci[0];
   }
 
   printf("Fib(%d) = %llu\n", N, result);
+  printf("P = %d\n", p);
 
   return 0;
 }
