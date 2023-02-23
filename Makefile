@@ -21,16 +21,18 @@ AOT_O := $(addprefix $(AOT_DIR)/, $(X86_64_AOT_O) $(AARCH64_AOT_O))
 NATIVE_DIR := sample_native
 INSTRUMENT_DIR := wasm-instrument
 
-all: native-lib tests
+all: native-lib instrument tests
 
 tdirs:
 	mkdir -p $(WASM_DIR)
 	mkdir -p $(AOT_DIR)
 
+.PHONY: instrument
 instrument:
 	make -j6 -C $(INSTRUMENT_DIR)
 	cp $(INSTRUMENT_DIR)/instrument .
 
+.PHONY: native-lib
 native-lib:
 	make -C $(NATIVE_DIR)
 	cp $(NATIVE_DIR)/libnative.so .
@@ -53,7 +55,7 @@ $(AOT_DIR)/%.aarch64.aot: $(WASM_DIR)/%.wasm
 # WASM Instrumentation + Compilation
 .SECONDARY: $(WASM_O)
 .ONESHELL:
-$(WASM_DIR)/%.wasm: $(TEST_DIR)/%.c instrument
+$(WASM_DIR)/%.wasm: $(TEST_DIR)/%.c
 	$(WASI_CLANG) --target=wasm32  \
 			--sysroot=$(WAMR_ROOT)/wamr-sdk/app/libc-builtin-sysroot   \
 			-O3 -pthread -nostdlib -z stack-size=32768      \
