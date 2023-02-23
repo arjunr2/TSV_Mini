@@ -9,6 +9,8 @@
 #include <set>
 #include <mutex>
 
+#define INSTRUMENT 1
+
 /* Timing */
 uint64_t start_ts;
 uint64_t end_ts;
@@ -42,7 +44,6 @@ std::set<uint32_t> shared_inst_idxs;
 /*  */
 
 
-#define INSTRUMENT 0
 void logaccess_wrapper(wasm_exec_env_t exec_env, uint32_t addr, uint32_t opcode, uint32_t inst_idx) {
   #if INSTRUMENT == 1
   mtx.lock();
@@ -93,8 +94,8 @@ void logend_wrapper(wasm_exec_env_t exec_env) {
 void init_acc_table() {
   size_t size = ((size_t)1 << 32);
   //access_table = (acc_entry*) malloc(sizeof(acc_entry) * size);
-  access_table = (acc_entry*) mmap(NULL, ((size_t)1 * sizeof(acc_entry))<<32, 
-                                    PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_NORESERVE, -1, 0);
+  access_table = (acc_entry*) mmap(NULL, sizeof(acc_entry) * (((size_t)1) << 32), 
+                                    PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS|MAP_NORESERVE, -1, 0);
   if (access_table == NULL) {
     perror("malloc error");
   }
