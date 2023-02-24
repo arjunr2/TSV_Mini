@@ -8,6 +8,8 @@
 #include <map>
 #include <set>
 #include <mutex>
+#include <vector>
+#include <fstream>
 
 #define INSTRUMENT 1
 
@@ -69,22 +71,34 @@ void logaccess_wrapper(wasm_exec_env_t exec_env, uint32_t addr, uint32_t opcode,
 void logend_wrapper(wasm_exec_env_t exec_env) {
   end_ts = gettime();
   float total_time = (float)(end_ts - start_ts) / 1000000; 
-  #if INSTRUMENT == 1
   printf("========= LOGEND ===========\n");
   printf("Time taken: %.3f\n", total_time);
 
+  #if INSTRUMENT == 1
+  std::vector<uint32_t> shared_addrs;
+  /* Read memory size from wamr API */
+  uint32_t mem_size = wasm_runtime_get_memory_size(get_module_inst(exec_env));
+  if (addr_max > mem_size) {
+    printf("ERROR in mem size (%u) calculation (less than max addr: %u)\n", mem_size, addr_max);
+  }
+  printf("Mem size: %u\n", mem_size);
   printf("Addr min: %u | Addr max: %u\n", addr_min, addr_max);
   printf("=== ACCESS TABLE ===\n");
-  for (uint64_t i = addr_min; i < addr_max; i++) {
+  for (uint64_t i = 0; i < mem_size; i++) {
     acc_entry *entry = access_table + i;
     if (entry->last_tid) {
       if (entry->shared) {
         printf("Addr [%lu] | Accesses: %lu [SHARED]\n", i, entry->freq);
+        shared_addrs.push_back(i);
       } else {
         printf("Addr [%lu] | Accesses: %lu\n", i, entry->freq);
       }
     }
   }
+
+  std::ofstream outfile("shared_mem.bin", std::ios::out | std::ios::binary);
+  uint64_t num_bytes = shared_addrs.size() * sizeof(uint32_t);
+  outfile.write((const char*) shared_addrs.data(), num_bytes);
   #endif
 }
 
@@ -93,7 +107,6 @@ void logend_wrapper(wasm_exec_env_t exec_env) {
 /* Initialization routine */
 void init_acc_table() {
   size_t size = ((size_t)1 << 32);
-  //access_table = (acc_entry*) malloc(sizeof(acc_entry) * size);
   access_table = (acc_entry*) mmap(NULL, sizeof(acc_entry) * (((size_t)1) << 32), 
                                     PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS|MAP_NORESERVE, -1, 0);
   if (access_table == NULL) {
