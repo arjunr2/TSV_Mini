@@ -12,6 +12,7 @@
 #include <fstream>
 
 #define INSTRUMENT 1
+#define TRACE_ACCESS 1
 
 /* Timing */
 uint64_t start_ts;
@@ -32,9 +33,10 @@ uint64_t gettime() {
 /* Access Logger */
 struct acc_entry {
   wasm_exec_env_t last_tid;
+  uint32_t last_inst_idx;
   uint64_t freq;
   bool shared;
-  acc_entry() : last_tid(NULL), freq(0), shared(0) { };
+  acc_entry() : last_tid(NULL), last_inst_idx(0), freq(0), shared(0) { };
 };
 
 std::mutex mtx;
@@ -49,17 +51,22 @@ std::set<uint32_t> shared_inst_idxs;
 void logaccess_wrapper(wasm_exec_env_t exec_env, uint32_t addr, uint32_t opcode, uint32_t inst_idx) {
   #if INSTRUMENT == 1
   mtx.lock();
+  #if TRACE_ACCESS == 1
+  printf("I: %u | A: %u\n", inst_idx, addr); 
+  #endif
   acc_entry *entry = access_table + addr;
   bool new_tid_acc = (exec_env != entry->last_tid);
   /* Flag as shared memory if different tids access it */
-  if (entry->last_tid && new_tid_acc) {
+  if (entry->last_tid && !entry->shared && new_tid_acc) {
     entry->shared = true;
+    shared_inst_idxs.insert(entry->last_inst_idx);
   }
   /* Log indexes to conflicting address */
-  if (entry->shared || new_tid_acc) {
+  if (entry->shared) {
     shared_inst_idxs.insert(inst_idx);
   }
   entry->last_tid = exec_env;
+  entry->last_inst_idx = inst_idx;
   entry->freq += 1;
   addr_min = (addr < addr_min) ? addr : addr_min;
   addr_max = (addr > addr_max) ? addr : addr_max;
@@ -75,7 +82,7 @@ void logend_wrapper(wasm_exec_env_t exec_env) {
   printf("Time taken: %.3f\n", total_time);
 
   #if INSTRUMENT == 1
-  std::vector<uint32_t> shared_addrs;
+  char logfile[] = "shared_mem.bin";
   /* Read memory size from wamr API */
   uint32_t mem_size = wasm_runtime_get_memory_size(get_module_inst(exec_env));
   if (addr_max > mem_size) {
@@ -89,16 +96,21 @@ void logend_wrapper(wasm_exec_env_t exec_env) {
     if (entry->last_tid) {
       if (entry->shared) {
         printf("Addr [%lu] | Accesses: %lu [SHARED]\n", i, entry->freq);
-        shared_addrs.push_back(i);
       } else {
         printf("Addr [%lu] | Accesses: %lu\n", i, entry->freq);
       }
     }
   }
 
-  std::ofstream outfile("shared_mem.bin", std::ios::out | std::ios::binary);
-  uint64_t num_bytes = shared_addrs.size() * sizeof(uint32_t);
-  outfile.write((const char*) shared_addrs.data(), num_bytes);
+  std::ofstream outfile(logfile, std::ios::out | std::ios::binary);
+  std::vector<uint32_t> inst_idxs(shared_inst_idxs.begin(), shared_inst_idxs.end());
+  uint64_t num_bytes = inst_idxs.size() * sizeof(uint32_t);
+  for (auto &i : inst_idxs) {
+    printf("%u ", i);
+  }
+  printf("\n");
+  outfile.write((char*) inst_idxs.data(), num_bytes);
+  printf("Written data to %s\n", logfile);
   #endif
 }
 

@@ -65,7 +65,7 @@ $(WASM_DIR)/%.wasm: $(TEST_DIR)/%.c
 			-Wl,--export=__heap_base,--export=__data_end    \
 			-Wl,--export=__wasm_call_ctors  \
 			$< -o $@
-	./instrument -o $@.inst $@
+	./instrument -s memaccess -o $@.inst $@
 	wasm2wat --enable-threads $@ -o $(WASM_DIR)/$*.wat
 	wasm2wat --enable-threads $@.inst -o $(WASM_DIR)/$*.wat.inst
 
