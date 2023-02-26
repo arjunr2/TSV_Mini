@@ -18,7 +18,7 @@ X86_64_AOT_O := $(TEST_C:.c=.aot)
 AOT_O := $(addprefix $(AOT_DIR)/, $(X86_64_AOT_O) $(AARCH64_AOT_O))
 
 
-NATIVE_DIR := sample_native
+IMPORT_DIR := imports
 INSTRUMENT_DIR := wasm-instrument
 
 all: native-lib instrument tests
@@ -34,8 +34,8 @@ instrument:
 
 .PHONY: native-lib
 native-lib:
-	make -C $(NATIVE_DIR)
-	cp $(NATIVE_DIR)/libnative.so .
+	make -C $(IMPORT_DIR)
+	cp $(IMPORT_DIR)/libaccess.so .
 
 
 tests: tdirs $(AOT_O)
@@ -75,7 +75,7 @@ clean-tests:
 	rm -rf wasms aots
 
 clean-tools:
-	make -C $(NATIVE_DIR) clean
+	make -C $(IMPORT_DIR) clean
 	make -C $(INSTRUMENT_DIR) clean
 
 clean: clean-tools clean-tests
