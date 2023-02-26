@@ -7,6 +7,7 @@
 
 #include <map>
 #include <set>
+#include <unordered_set>
 #include <mutex>
 #include <vector>
 #include <fstream>
@@ -33,11 +34,12 @@ uint64_t gettime() {
 /* Access Logger */
 struct acc_entry {
   wasm_exec_env_t last_tid;
-  uint32_t last_inst_idx;
+  std::unordered_set<uint32_t> inst_idxs;
   uint64_t freq;
   bool shared;
-  acc_entry() : last_tid(NULL), last_inst_idx(0), freq(0), shared(0) { };
+  acc_entry() : last_tid(NULL), inst_idxs(0), freq(0), shared(0) { };
 };
+size_t table_size = sizeof(acc_entry) * ((size_t)1 << 32);
 
 std::mutex mtx;
 acc_entry *access_table = NULL;
@@ -56,17 +58,29 @@ void logaccess_wrapper(wasm_exec_env_t exec_env, uint32_t addr, uint32_t opcode,
   #endif
   acc_entry *entry = access_table + addr;
   bool new_tid_acc = (exec_env != entry->last_tid);
-  /* Flag as shared memory if different tids access it */
-  if (entry->last_tid && !entry->shared && new_tid_acc) {
-    entry->shared = true;
-    shared_inst_idxs.insert(entry->last_inst_idx);
+  /* First access to address: Construct instruction set */
+  if (!entry->last_tid) {
+    new (&entry->inst_idxs) std::unordered_set<uint32_t>;
+    entry->inst_idxs.insert(inst_idx);
   }
-  /* Log indexes to conflicting address */
-  if (entry->shared) {
+  /* Shared accesses from any thread write to global set */
+  else if (entry->shared) {
     shared_inst_idxs.insert(inst_idx);
   }
+  /* Unshared access from new thread: Mark as shared and append logged insts */
+  else if (new_tid_acc) {
+    printf("In del phase\n");
+    entry->shared = true;
+    shared_inst_idxs.insert(entry->inst_idxs.begin(), entry->inst_idxs.end());
+    /* Save some memory by deleting unused set */
+    entry->inst_idxs.clear();
+    //delete &(entry->inst_idxs);
+  }
+  /* Unshared access from only one thread: Log inst */
+  else {
+    entry->inst_idxs.insert(inst_idx);
+  }
   entry->last_tid = exec_env;
-  entry->last_inst_idx = inst_idx;
   entry->freq += 1;
   addr_min = (addr < addr_min) ? addr : addr_min;
   addr_max = (addr > addr_max) ? addr : addr_max;
@@ -112,15 +126,18 @@ void logend_wrapper(wasm_exec_env_t exec_env) {
   outfile.write((char*) inst_idxs.data(), num_bytes);
   printf("Written data to %s\n", logfile);
   #endif
+  int status = munmap(access_table, table_size);
+  if (status == -1) {
+    perror("munmap error");
+  }
 }
 
 
 
 /* Initialization routine */
 void init_acc_table() {
-  size_t size = ((size_t)1 << 32);
-  access_table = (acc_entry*) mmap(NULL, sizeof(acc_entry) * (((size_t)1) << 32), 
-                                    PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS|MAP_NORESERVE, -1, 0);
+  access_table = (acc_entry*) mmap(NULL, table_size, PROT_READ|PROT_WRITE, 
+                    MAP_PRIVATE|MAP_ANONYMOUS|MAP_NORESERVE, -1, 0);
   if (access_table == NULL) {
     perror("malloc error");
   }
