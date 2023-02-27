@@ -13,7 +13,7 @@
 #include <fstream>
 
 #define INSTRUMENT 1
-#define TRACE_ACCESS 1
+#define TRACE_ACCESS 0
 
 /* Timing */
 uint64_t start_ts;
@@ -69,7 +69,6 @@ void logaccess_wrapper(wasm_exec_env_t exec_env, uint32_t addr, uint32_t opcode,
   }
   /* Unshared access from new thread: Mark as shared and append logged insts */
   else if (new_tid_acc) {
-    printf("In del phase\n");
     entry->shared = true;
     shared_inst_idxs.insert(entry->inst_idxs.begin(), entry->inst_idxs.end());
     /* Save some memory by deleting unused set */

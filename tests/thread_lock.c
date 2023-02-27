@@ -9,19 +9,23 @@
 uint64_t fibonacci[2] = {1, 0};
 int num_ct = 1;
 volatile int p = 0;
+pthread_mutex_t lock;
 
 void *fib_thread(void *arg) {
   int tnum = *((int*)arg);
   int i = 0;
   while (1) {
     p += tnum;
-    if (num_ct >= N) {
-      break;
-    }
+    pthread_mutex_lock(&lock);
+    if (num_ct >= N) { 
+      pthread_mutex_unlock(&lock);
+      break; 
+    } 
     uint64_t f1 = fibonacci[1];
     fibonacci[1] = fibonacci[0];
     fibonacci[0] += f1;
     num_ct++;
+    pthread_mutex_unlock(&lock);
   }
   return NULL;
 }
@@ -38,7 +42,10 @@ int main() {
     result = fibonacci[0];
   }
   else {
-    //printf("Spawning %d fib threads to compute FIB(%d)\n", NUM_THREADS, N);
+    if (pthread_mutex_init(&lock, NULL) != 0) {
+      printf("Mutex init failed\n");
+      exit(1);
+    }
     for (int i = 0; i < NUM_THREADS; i++) {
       if (pthread_create(&tid[i], NULL, fib_thread, &i)) {
         printf("Failed to create thread\n");
@@ -52,7 +59,7 @@ int main() {
         exit(1);
       }
     }
-
+    pthread_mutex_destroy(&lock);
     //printf("Joined threads successfully!\n");
     result = fibonacci[0];
   }
