@@ -1,9 +1,17 @@
 .PHONY: clean
 
-SRC := access.cpp tsvd.cpp
-SRC_O := $(SRC:.cpp=.o)
+SRC_CPP := access.cpp tsvd.cpp
+SRC_C := optable.c
+SRC_O := $(SRC_CPP:.cpp=.o)
 
 all: $(SRC_O)
+
+optable.o: optable.c
+	gcc -c $< -o $@ 
+
+tsvd.o: tsvd.cpp optable.o
+	g++ -g -c -fPIC $< -o $@
+	g++ -g -shared -o lib$*.so optable.o $@ libvmlib.a
 
 %.o: %.cpp
 	g++ -g -c -fPIC $< -o $@

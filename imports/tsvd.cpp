@@ -4,6 +4,7 @@
 #include <sys/mman.h>
 
 #include "wasm_export.h"
+#include "wasmops.h"
 
 #include <map>
 #include <set>
@@ -35,10 +36,9 @@ typedef std::unordered_set<uint32_t> InstSet;
 /* TSV Access Logging */
 struct tsv_entry {
   wasm_exec_env_t last_tid;
+  uint32_t last_inst_idx;
   uint64_t last_ts;
-  bool rw;
   uint64_t freq;
-  InstSet inst_idxs;
 };
 
 std::mutex mtx;
@@ -55,6 +55,7 @@ void logaccess_wrapper(wasm_exec_env_t exec_env, uint32_t addr, uint32_t opcode,
   #endif
   tsv_entry *entry = tsv_table + addr;
   bool new_tid_acc = (exec_env != entry->last_tid);
+  printf("Opcode access: %d\n", opcode_access[opcode].width);
   mtx.unlock();
   #endif
 }
@@ -77,7 +78,7 @@ void logend_wrapper(wasm_exec_env_t exec_env) {
 
 
 /* Initialization routine */
-void init_acc_table() {
+void init_tsv_table() {
   tsv_table = (tsv_entry*) mmap(NULL, table_size, PROT_READ|PROT_WRITE, 
                     MAP_PRIVATE|MAP_ANONYMOUS|MAP_NORESERVE, -1, 0);
   if (tsv_table == NULL) {
@@ -98,7 +99,7 @@ static NativeSymbol native_symbols[] = {
 
 extern "C" uint32_t get_native_lib (char **p_module_name, NativeSymbol **p_native_symbols) {
   *p_module_name = "instrument";
-  init_acc_table();
+  init_tsv_table();
   *p_native_symbols = native_symbols;
   return sizeof(native_symbols) / sizeof(NativeSymbol);
 }

@@ -36,23 +36,24 @@ instrument:
 native-lib:
 	make -C $(IMPORT_DIR)
 	cp $(IMPORT_DIR)/libaccess.so .
+	cp $(IMPORT_DIR)/libtsvd.so .
 
 
 tests: tdirs $(AOT_O)
 
-# AOT Compilation 
+# AOT Original + Access Compilation 
 .ONESHELL:
 $(AOT_DIR)/%.aot: $(WASM_DIR)/%.wasm
 	$(WAMRC) --enable-multi-thread -o $@ $<
-	$(WAMRC) --enable-multi-thread -o $@.inst $<.inst
+	$(WAMRC) --enable-multi-thread -o $@.accinst $<.accinst
 
 .ONESHELL:
 $(AOT_DIR)/%.aarch64.aot: $(WASM_DIR)/%.wasm
 	$(WAMRC) --target=aarch64 --enable-multi-thread -o $@ $<
-	$(WAMRC) --target=aarch64 --enable-multi-thread -o $@.inst $<.inst
+	$(WAMRC) --target=aarch64 --enable-multi-thread -o $@.accinst $<.accinst
 
 
-# WASM Instrumentation + Compilation
+# WASM Compilation + Access Instrumentation
 .SECONDARY: $(WASM_O)
 .ONESHELL:
 $(WASM_DIR)/%.wasm: $(TEST_DIR)/%.c
@@ -65,13 +66,30 @@ $(WASM_DIR)/%.wasm: $(TEST_DIR)/%.c
 			-Wl,--export=__heap_base,--export=__data_end    \
 			-Wl,--export=__wasm_call_ctors  \
 			$< -o $@
-	./instrument -s memaccess -o $@.inst $@
+	./instrument -s memaccess -o $@.accinst $@
 	wasm2wat --enable-threads $@ -o $(WASM_DIR)/$*.wat
-	wasm2wat --enable-threads $@.inst -o $(WASM_DIR)/$*.wat.inst
+	wasm2wat --enable-threads $@.accinst -o $(WASM_DIR)/$*.wat.accinst
 
 
+# WASM TSV shared reinstrumentation
+FILTER := shared_mem.bin
+AOT_O_SHINST := $(addsuffix .tsvinst, $(AOT_O))
+
+shared-instrument: $(AOT_O_SHINST)
+
+$(AOT_DIR)/%.aarch64.aot.tsvinst: $(WASM_DIR)/%.wasm.tsvinst
+	$(WAMRC) --target=aarch64 --enable-multi-thread -o $@ $<
+
+$(AOT_DIR)/%.aot.tsvinst: $(WASM_DIR)/%.wasm.tsvinst
+	$(WAMRC) --enable-multi-thread -o $@ $<
+
+$(WASM_DIR)/%.wasm.tsvinst: $(FILTER)
+	./instrument -s memshared -a $(FILTER) -o $@ $(WASM_DIR)/$*.wasm
+
+
+# Cleaning
 clean-tests:
-	rm -f *.wasm *.wat *.aot *.so instrument
+	rm -f *.wasm *.wat *.aot *.so *.accinst *.tsvinst instrument
 	rm -rf wasms aots
 
 clean-tools:
