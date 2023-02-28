@@ -30,19 +30,19 @@ uint64_t gettime() {
 }
 /* */
 
+typedef std::unordered_set<uint32_t> InstSet;
 
 /* Access Logger */
 struct acc_entry {
   wasm_exec_env_t last_tid;
-  std::unordered_set<uint32_t> inst_idxs;
+  InstSet inst_idxs;
   uint64_t freq;
   bool shared;
-  acc_entry() : last_tid(NULL), inst_idxs(0), freq(0), shared(0) { };
 };
-size_t table_size = sizeof(acc_entry) * ((size_t)1 << 32);
 
 std::mutex mtx;
 acc_entry *access_table = NULL;
+size_t table_size = sizeof(acc_entry) * ((size_t)1 << 32);
 uint32_t addr_min = -1;
 uint32_t addr_max = 0;
 
@@ -60,7 +60,7 @@ void logaccess_wrapper(wasm_exec_env_t exec_env, uint32_t addr, uint32_t opcode,
   bool new_tid_acc = (exec_env != entry->last_tid);
   /* First access to address: Construct instruction set */
   if (!entry->last_tid) {
-    new (&entry->inst_idxs) std::unordered_set<uint32_t>;
+    new (&entry->inst_idxs) InstSet;
     entry->inst_idxs.insert(inst_idx);
   }
   /* Shared accesses from any thread write to global set */
@@ -72,8 +72,7 @@ void logaccess_wrapper(wasm_exec_env_t exec_env, uint32_t addr, uint32_t opcode,
     entry->shared = true;
     shared_inst_idxs.insert(entry->inst_idxs.begin(), entry->inst_idxs.end());
     /* Save some memory by deleting unused set */
-    entry->inst_idxs.clear();
-    //delete &(entry->inst_idxs);
+    entry->inst_idxs.~InstSet();
   }
   /* Unshared access from only one thread: Log inst */
   else {

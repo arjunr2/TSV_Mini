@@ -1,8 +1,13 @@
 .PHONY: clean
 
-accesses.o: accesses.cpp
+SRC := access.cpp tsvd.cpp
+SRC_O := $(SRC:.cpp=.o)
+
+all: $(SRC_O)
+
+%.o: %.cpp
 	g++ -g -c -fPIC $< -o $@
-	g++ -g -shared -o libaccess.so $@ libvmlib.a
-	
+	g++ -g -shared -o lib$*.so $@ libvmlib.a
+
 clean:
-	rm -f *.o libaccess.so
+	rm -f *.o *.so
