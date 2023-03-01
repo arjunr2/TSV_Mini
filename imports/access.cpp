@@ -121,6 +121,9 @@ void logend_wrapper(wasm_exec_env_t exec_env) {
     printf("%u ", i);
   }
   printf("\n");
+
+  uint32_t arr_size = inst_idxs.back() + 1;
+  outfile.write((char*) &arr_size, 4);
   outfile.write((char*) inst_idxs.data(), num_bytes);
   printf("Written data to %s\n", logfile);
   #endif

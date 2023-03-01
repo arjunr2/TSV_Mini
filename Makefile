@@ -33,6 +33,7 @@ instrument:
 	cp $(INSTRUMENT_DIR)/instrument .
 
 .PHONY: native-lib
+.ONESHELL:
 native-lib:
 	make -C $(IMPORT_DIR)
 	cp $(IMPORT_DIR)/libaccess.so .
@@ -85,6 +86,7 @@ $(AOT_DIR)/%.aot.tsvinst: $(WASM_DIR)/%.wasm.tsvinst
 
 $(WASM_DIR)/%.wasm.tsvinst: $(FILTER)
 	./instrument -s memshared -a $(FILTER) -o $@ $(WASM_DIR)/$*.wasm
+	wasm2wat --enable-threads $@ -o $(WASM_DIR)/$*.wat.tsvinst
 
 
 # Cleaning
