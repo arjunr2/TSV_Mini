@@ -11,6 +11,7 @@
 #include <mutex>
 #include <vector>
 #include <fstream>
+#include <atomic>
 
 #define INSTRUMENT 1
 #define TRACE_ACCESS 0
@@ -134,7 +135,6 @@ void logend_wrapper(wasm_exec_env_t exec_env) {
 }
 
 
-
 /* Initialization routine */
 void init_acc_table() {
   access_table = (acc_entry*) mmap(NULL, table_size, PROT_READ|PROT_WRITE, 
@@ -142,14 +142,28 @@ void init_acc_table() {
   if (access_table == NULL) {
     perror("malloc error");
   }
-  start_ts = gettime();
 }
+
+void logstart_wrapper(wasm_exec_env_t exec_env) {
+  static std::atomic_bool first {false};
+  static bool first_done = false;
+  if (first.exchange(true) == false) {
+    init_acc_table();
+    start_ts = gettime();
+    first_done = true;
+  }
+  else {
+    while (!first_done) { };
+  }
+}
+
 
 
 /* WAMR Registration Hooks */
 #define REG_NATIVE_FUNC(func_name, sig) \
   { #func_name, (void*) func_name##_wrapper, sig, NULL }
 static NativeSymbol native_symbols[] = {
+  REG_NATIVE_FUNC(logstart, "()"),
   REG_NATIVE_FUNC(logaccess, "(iii)"),
   REG_NATIVE_FUNC(logend, "()")
 };
