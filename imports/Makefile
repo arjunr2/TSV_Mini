@@ -10,8 +10,8 @@ optable.o: optable.c
 	gcc -c $< -o $@ 
 
 tsvd.o: tsvd.cpp optable.o
-	g++ -g -c -fPIC $< -o $@
-	g++ -g -shared -o lib$*.so optable.o $@ libvmlib.a
+	g++ -std=c++2a -g -c -fPIC $< -o $@
+	g++ -std=c++2a -g -shared -o lib$*.so optable.o $@ libvmlib.a
 
 %.o: %.cpp
 	g++ -g -c -fPIC $< -o $@

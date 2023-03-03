@@ -15,8 +15,8 @@ void *fib_thread(void *arg) {
   int tnum = *((int*)arg);
   int i = 0;
   while (1) {
-    p += tnum;
     pthread_mutex_lock(&lock);
+    p += tnum;
     if (num_ct >= N) { 
       pthread_mutex_unlock(&lock);
       break; 

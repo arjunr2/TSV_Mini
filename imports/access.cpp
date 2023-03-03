@@ -147,6 +147,7 @@ void init_acc_table() {
 void logstart_wrapper(wasm_exec_env_t exec_env) {
   static std::atomic_bool first {false};
   static bool first_done = false;
+  /* Init functions should only happen once */
   if (first.exchange(true) == false) {
     init_acc_table();
     start_ts = gettime();
