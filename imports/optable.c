@@ -1,5 +1,5 @@
 /* C file for designated initializers */
-#include "wasmops.h"
+#include "wasmdefs.h"
 
 opaccess opcode_access[] = {
     [WASM_OP_I32_LOAD] = { LOAD, 4 },

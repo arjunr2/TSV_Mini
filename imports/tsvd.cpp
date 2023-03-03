@@ -5,7 +5,7 @@
 #include <time.h>
 
 #include "wasm_export.h"
-#include "wasmops.h"
+#include "wasmdefs.h"
 
 #include <unordered_set>
 #include <mutex>
@@ -13,7 +13,7 @@
 #include <atomic>
 
 #define INSTRUMENT 1
-#define TRACE_ACCESS 1
+#define TRACE_ACCESS 0
 
 #define DELAY 500
 

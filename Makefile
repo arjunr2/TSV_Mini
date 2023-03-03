@@ -58,7 +58,7 @@ $(AOT_DIR)/%.aarch64.aot: $(WASM_DIR)/%.wasm
 .SECONDARY: $(WASM_O)
 .ONESHELL:
 $(WASM_DIR)/%.wasm: $(TEST_DIR)/%.c
-	$(WASI_CLANG) --target=wasm32  \
+	$(WASI_CLANG) -g --target=wasm32  \
 			--sysroot=$(WAMR_ROOT)/wamr-sdk/app/libc-builtin-sysroot   \
 			-O3 -pthread -nostdlib -z stack-size=32768      \
 			-Wl,--shared-memory             \
@@ -66,7 +66,7 @@ $(WASM_DIR)/%.wasm: $(TEST_DIR)/%.c
 			-Wl,--no-entry -Wl,--export=main                \
 			-Wl,--export=__heap_base,--export=__data_end    \
 			-Wl,--export=__wasm_call_ctors  \
-			$< -o $@
+			$< $(TEST_DIR)/liblfds711.a -o $@
 	./instrument -s memaccess -o $@.accinst $@
 	wasm2wat --enable-threads $@ -o $(WASM_DIR)/$*.wat
 	wasm2wat --enable-threads $@.accinst -o $(WASM_DIR)/$*.wat.accinst
