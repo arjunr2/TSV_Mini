@@ -23,9 +23,6 @@ INSTRUMENT_DIR := wasm-instrument
 
 all: native-lib instrument tests
 
-tdirs:
-	mkdir -p $(WASM_DIR)
-	mkdir -p $(AOT_DIR)
 
 .PHONY: instrument
 instrument:
@@ -39,8 +36,15 @@ native-lib:
 	cp $(IMPORT_DIR)/libaccess.so .
 	cp $(IMPORT_DIR)/libtsvd.so .
 
+.PHONY: tests setup
+tests: setup $(AOT_O)
 
-tests: tdirs $(AOT_O)
+.ONESHELL:
+setup:
+	mkdir -p $(WASM_DIR)
+	mkdir -p $(AOT_DIR)
+	make -C $(TEST_DIR)
+
 
 # AOT Original + Access Compilation 
 .ONESHELL:
@@ -91,11 +95,13 @@ $(WASM_DIR)/%.wasm.tsvinst: $(FILTER)
 
 # Cleaning
 clean-tests:
-	rm -f *.wasm *.wat *.aot *.so *.accinst *.tsvinst instrument
-	rm -rf wasms aots
+	#rm -f *.wasm *.wat *.aot *.so *.accinst *.tsvinst
+	rm -rf $(WASM_DIR) $(AOT_DIR)
+	make -C $(TEST_DIR) clean
 
 clean-tools:
 	make -C $(IMPORT_DIR) clean
 	make -C $(INSTRUMENT_DIR) clean
+	make -C $(TEST_DIR) clean
 
 clean: clean-tools clean-tests
