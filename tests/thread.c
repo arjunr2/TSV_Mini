@@ -1,7 +1,5 @@
 #include <stdint.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <pthread.h>
+#include "thread_common.h"
 
 #define NUM_THREADS 2
 #define N 200000
@@ -38,22 +36,8 @@ int main() {
     result = fibonacci[0];
   }
   else {
-    //printf("Spawning %d fib threads to compute FIB(%d)\n", NUM_THREADS, N);
-    for (int i = 0; i < NUM_THREADS; i++) {
-      if (pthread_create(&tid[i], NULL, fib_thread, &i)) {
-        printf("Failed to create thread\n");
-        exit(1);
-      }
-    }
-    
-    for (int i = 0; i < NUM_THREADS; i++) {
-      if (pthread_join(tid[i], NULL)) {
-        printf("Failed to join thread\n");
-        exit(1);
-      }
-    }
-
-    //printf("Joined threads successfully!\n");
+    create_tasks(tid, NUM_THREADS, fib_thread, NULL, false);
+    join_tasks(tid, NUM_THREADS);
     result = fibonacci[0];
   }
 
