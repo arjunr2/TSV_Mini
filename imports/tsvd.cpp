@@ -128,7 +128,7 @@ void logend_wrapper(wasm_exec_env_t exec_env) {
   printf("Time taken: %.3f\n", total_time);
 
   #if INSTRUMENT == 1
-  printf("Violations:\n");
+  printf("Violations: %lu\n", violation_set.size());
   int i = 0;
   for (auto &violation : violation_set) {
     printf("Addr [%u|%u] by instructions (%u, %u) --> TID(%p, %p)\n", violation.first.addr, violation.second.addr, 

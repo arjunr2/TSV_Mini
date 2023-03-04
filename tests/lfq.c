@@ -2,10 +2,8 @@
 #include <string.h>
 #include "liblfds711.h"
 
-struct test_data
-{
-  char
-    name[64];
+struct test_data {
+  char name[64];
 };
 
 int main()
@@ -16,9 +14,7 @@ int main()
   struct lfds711_queue_bmm_state
     qbmms;
 
-  struct test_data
-    td,
-    *temp_td;
+  struct test_data td, *temp_td;
 
   lfds711_queue_bmm_init_valid_on_current_logical_core( &qbmms, qbmme, 8, NULL );
 
