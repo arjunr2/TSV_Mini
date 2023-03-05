@@ -3,10 +3,10 @@
 #include "thread_common.h"
 #include "liblfds711.h"
 
-#define NUM_THREADS 3
-#define QSIZE (1 << 2)
+#define NUM_THREADS 2
+#define QSIZE (1 << 6)
 
-#define NUM_ITERATIONS 20
+#define NUM_ITERATIONS 200
 
 struct test_data {
   char name[64];
@@ -25,10 +25,9 @@ void* fast_enqueue_dequeue_thread(void* arg) {
   for (int i = 0; i < NUM_ITERATIONS; i++) {
     lfds711_queue_bmm_dequeue ( qbmms, NULL, &dequeue_val);
     rv = lfds711_queue_bmm_enqueue( qbmms, NULL, (void*) &i );
-    printf("It: %d\n", i);
     if (rv == 1) { total_enqueues++; }
   }
-  printf("Total enqueues: %u\n", total_enqueues);
+  //printf("Total enqueues: %u\n", total_enqueues);
   return NULL;
 }
 
