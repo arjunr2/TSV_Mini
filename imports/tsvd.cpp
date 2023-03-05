@@ -36,12 +36,12 @@ uint64_t gettime() {
 struct access_record {
   wasm_exec_env_t tid;
   uint32_t inst_idx;
-  access_type type;
+  uint32_t opcode;
   uint32_t addr;
 
   bool operator==(const access_record& record) const {
     return (tid == record.tid) && (inst_idx == record.inst_idx) 
-          && (type == record.type) && (addr == record.addr);
+          && (opcode == record.opcode) && (addr == record.addr);
   }
 };
 
@@ -80,14 +80,14 @@ inline void delay(uint32_t punits) {
 
 void logaccess_wrapper(wasm_exec_env_t exec_env, uint32_t addr, uint32_t opcode, uint32_t inst_idx) {
   #if INSTRUMENT == 1
-  access_record cur_access {exec_env, inst_idx, opcode_access[opcode].type, addr};
   #if TRACE_ACCESS == 1
   if (cur_access.type == STORE) 
-    printf("I: %u | A: %u | T: %p (W)\n", cur_access.inst_idx, cur_access.addr, cur_access.tid); 
+    printf("I: %u | A: %u | T: %p (W)\n", inst_idx, addr, tid); 
   else 
-    printf("I: %u | A: %u | T: %p (R)\n", cur_access.inst_idx, cur_access.addr, cur_access.tid); 
+    printf("I: %u | A: %u | T: %p (R)\n", inst_idx, addr, tid); 
   #endif
 
+  access_record cur_access {exec_env, inst_idx, opcode, addr};
   tsv_entry *entry = tsv_table + addr;
   bool probed = entry->probe.exchange(true);
   /* If not probed, setup probe info and delay */
@@ -104,9 +104,10 @@ void logaccess_wrapper(wasm_exec_env_t exec_env, uint32_t addr, uint32_t opcode,
     /* Access checked atomically */
     entry->access_mtx.lock();
     if (exec_env != entry->access.tid) {
-      //printf("Conflict with %u\n", entry->access.inst_idx);
-      if ((entry->access.type == STORE) || (cur_access.type == STORE)) {
-        printf("Violation!\n");
+      const opaccess opacc1 = opcode_access[entry->access.opcode];
+      const opaccess opacc2 = opcode_access[opcode];
+      if ( ((opacc1.type == STORE) || (opacc2.type == STORE))
+            && ((opacc1.mode == NON_ATOMIC) || (opacc2.mode == NON_ATOMIC)) ) {
         /* Log as violation */
         violation_mtx.lock();
         violation_set.insert(std::make_pair(entry->access, cur_access));
@@ -131,8 +132,12 @@ void logend_wrapper(wasm_exec_env_t exec_env) {
   printf("Violations: %lu\n", violation_set.size());
   int i = 0;
   for (auto &violation : violation_set) {
-    printf("Addr [%u|%u] by instructions (%u, %u) --> TID(%p, %p)\n", violation.first.addr, violation.second.addr, 
-      violation.first.inst_idx, violation.second.inst_idx, violation.first.tid, violation.second.tid);
+    printf("Addr [%-10u] by instructions [%-22s, %-22s] --> (%-8u, %-8u) | %d %d\n", 
+            violation.first.addr,
+            opcode_access[violation.first.opcode].mnemonic, opcode_access[violation.second.opcode].mnemonic,
+            violation.first.inst_idx, violation.second.inst_idx, 
+            violation.first.tid == violation.second.tid,
+            violation.first.addr != violation.second.addr);
   }
   #endif
   int status = munmap(tsv_table, table_size);
