@@ -48,7 +48,7 @@ DGFLAGS_MANDATORY      := -MM
 DGFLAGS_OPTIONAL       := -std=gnu89
 
 CC                     := /opt/wasi-sdk-16/bin/clang
-CFLAGS_MANDATORY       := --target=wasm32 -c -O3 -pthread -nostdlib #-z stack-size=32768      \
+CFLAGS_MANDATORY       := --target=wasm32-wasi -c -O3 -pthread -nostdlib #-z stack-size=32768      \
 
 AR                     := llvm-ar
 ARFLAGS                :=
