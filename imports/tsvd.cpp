@@ -72,7 +72,7 @@ uint32_t inst_count;
 
 /* Delay without nanosleep since we don't want syscall overhead */
 /* Delay is relative to processor speed */
-inline void delay(uint32_t punits) {
+static inline void delay(uint32_t punits) {
   for (int i = 0; i < punits; i++) {
     asm volatile ("nop");
   }

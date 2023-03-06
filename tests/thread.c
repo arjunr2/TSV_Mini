@@ -36,7 +36,7 @@ int main() {
     result = fibonacci[0];
   }
   else {
-    create_tasks(tid, NUM_THREADS, fib_thread, NULL, false);
+    create_tasks(tid, NUM_THREADS, fib_thread, NULL, true);
     join_tasks(tid, NUM_THREADS);
     result = fibonacci[0];
   }

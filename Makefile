@@ -8,6 +8,7 @@ WAMRC := $(WAMR_ROOT)/wamr-compiler/build/wamrc
 TEST_DIR := tests
 WASM_DIR := wasms
 AOT_DIR := aots
+SHARED_ACC_DIR := shared_access
 
 TEST_C := $(notdir $(wildcard $(TEST_DIR)/*.c))
 
@@ -38,6 +39,7 @@ native-lib:
 
 .PHONY: tests setup
 tests: setup $(AOT_O)
+	mkdir -p $(SHARED_ACC_DIR)
 
 .ONESHELL:
 setup:
@@ -79,6 +81,8 @@ $(WASM_DIR)/%.wasm: $(TEST_DIR)/%.c
 # WASM TSV shared reinstrumentation
 FILTER := shared_mem.bin
 AOT_O_SHINST := $(addsuffix .tsvinst, $(AOT_O))
+SHARED_ACC_BINS := $(notdir $(wildcard $(SHARED_ACC_DIR)/*.shared_acc.bin))
+AOT_O_SHINST := $(addprefix $(AOT_DIR)/, $(SHARED_ACC_BINS:.shared_acc.bin=.aot.tsvinst))
 
 shared-instrument: $(AOT_O_SHINST)
 
@@ -88,15 +92,15 @@ $(AOT_DIR)/%.aarch64.aot.tsvinst: $(WASM_DIR)/%.wasm.tsvinst
 $(AOT_DIR)/%.aot.tsvinst: $(WASM_DIR)/%.wasm.tsvinst
 	$(WAMRC) --enable-multi-thread -o $@ $<
 
-$(WASM_DIR)/%.wasm.tsvinst: $(FILTER)
-	./instrument -s memshared -a $(FILTER) -o $@ $(WASM_DIR)/$*.wasm
+$(WASM_DIR)/%.wasm.tsvinst: $(SHARED_ACC_DIR)/%.shared_acc.bin
+	./instrument -s memshared -a $< -o $@ $(WASM_DIR)/$*.wasm
 	wasm2wat --enable-threads $@ -o $(WASM_DIR)/$*.wat.tsvinst
 
 
 # Cleaning
 clean-tests:
 	#rm -f *.wasm *.wat *.aot *.so *.accinst *.tsvinst
-	rm -rf $(WASM_DIR) $(AOT_DIR)
+	rm -rf $(WASM_DIR) $(AOT_DIR) $(SHARED_ACC_DIR)
 	make -C $(TEST_DIR) clean
 
 clean-tools:
