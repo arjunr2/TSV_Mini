@@ -6,7 +6,7 @@
 #define NUM_THREADS 2
 #define QSIZE (1 << 6)
 
-#define NUM_ITERATIONS 200
+#define NUM_ITERATIONS 20000
 
 struct test_data {
   char name[64];

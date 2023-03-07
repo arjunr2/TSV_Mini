@@ -14,6 +14,7 @@
 
 #define INSTRUMENT 1
 #define TRACE_ACCESS 0
+#define TRACE_VIOLATION 0
 
 #define DELAY 500
 
@@ -32,7 +33,7 @@ uint64_t gettime() {
 }
 /* */
 
-/* TSV Access Logging */
+/* Code Access Record */
 struct access_record {
   wasm_exec_env_t tid;
   uint32_t inst_idx;
@@ -40,19 +41,27 @@ struct access_record {
   uint32_t addr;
 
   bool operator==(const access_record& record) const {
-    return (tid == record.tid) && (inst_idx == record.inst_idx) 
-          && (opcode == record.opcode) && (addr == record.addr);
+    return (inst_idx == record.inst_idx) && (opcode == record.opcode);
   }
 };
 
+/* Violation Record */
+typedef std::pair<access_record, access_record> AccessRecordPair;
 struct AccessRecordPairHashFunction {
-  size_t operator()(const std::pair<access_record, access_record> &p) const {
-    return std::hash<uint32_t>{}(p.first.inst_idx) ^ std::hash<uint32_t>{}(p.first.inst_idx);
+  size_t operator()(const AccessRecordPair &p) const {
+    return std::hash<uint32_t>{}(p.first.inst_idx) ^ std::hash<uint32_t>{}(p.second.inst_idx);
   }
 };
+struct AccessRecordPairEqualFunction {
+  bool operator()(const AccessRecordPair &lhs, const AccessRecordPair &rhs) const {
+    return (lhs == rhs) || ((lhs.first == rhs.second) && (lhs.second == rhs.first));
+  }
+};
+typedef std::unordered_set<AccessRecordPair, AccessRecordPairHashFunction, AccessRecordPairEqualFunction> ViolationSet;
+ViolationSet violation_set;
 std::mutex violation_mtx;
-std::unordered_set<std::pair<access_record, access_record>, AccessRecordPairHashFunction> violation_set;
 
+/* TSV Access Logging */
 struct tsv_entry {
   std::atomic_bool probe;
   std::atomic_llong freq_diff_tid_consec;
@@ -110,7 +119,13 @@ void logaccess_wrapper(wasm_exec_env_t exec_env, uint32_t addr, uint32_t opcode,
             && ((opacc1.mode == NON_ATOMIC) || (opacc2.mode == NON_ATOMIC)) ) {
         /* Log as violation */
         violation_mtx.lock();
-        violation_set.insert(std::make_pair(entry->access, cur_access));
+        std::pair<ViolationSet::iterator, bool> result = violation_set.insert(std::make_pair(entry->access, cur_access));
+        #if TRACE_VIOLATION == 1
+        printf("Current violation: %d, %d\n", entry->access.inst_idx, cur_access.inst_idx);
+        if (!result.second) {
+          printf("Duplicate found : %d, %d\n", result.first->first.inst_idx, result.first->second.inst_idx);
+        }
+        #endif
         violation_mtx.unlock();
       }
       entry->freq_diff_tid_consec++;

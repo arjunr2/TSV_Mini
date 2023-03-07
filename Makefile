@@ -9,6 +9,7 @@ TEST_DIR := tests
 WASM_DIR := wasms
 AOT_DIR := aots
 SHARED_ACC_DIR := shared_access
+VIOLATION_DIR := violation_logs
 
 TEST_C := $(notdir $(wildcard $(TEST_DIR)/*.c))
 
@@ -100,12 +101,15 @@ $(WASM_DIR)/%.wasm.tsvinst: $(SHARED_ACC_DIR)/%.shared_acc.bin
 # Cleaning
 clean-tests:
 	#rm -f *.wasm *.wat *.aot *.so *.accinst *.tsvinst
-	rm -rf $(WASM_DIR) $(AOT_DIR) $(SHARED_ACC_DIR)
+	rm -rf $(WASM_DIR) $(AOT_DIR)
 	make -C $(TEST_DIR) clean
 
 clean-tools:
 	make -C $(IMPORT_DIR) clean
 	make -C $(INSTRUMENT_DIR) clean
 	make -C $(TEST_DIR) clean
+
+clean-logs:
+	rm -rf $(SHARED_ACC_DIR) $(VIOLATION_DIR)
 
 clean: clean-tools clean-tests
