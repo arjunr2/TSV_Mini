@@ -1,7 +1,6 @@
 #include <stdint.h>
 #include "thread_common.h"
 
-#define NUM_THREADS 2
 #define N 200000
 
 uint64_t fibonacci[2] = {1, 0};
@@ -36,8 +35,7 @@ int main() {
     result = fibonacci[0];
   }
   else {
-    create_tasks(tid, NUM_THREADS, fib_thread, NULL, true);
-    join_tasks(tid, NUM_THREADS);
+    spawn_thread_tasks (fib_thread, NULL, true);
     result = fibonacci[0];
   }
 

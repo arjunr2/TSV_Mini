@@ -3,9 +3,7 @@
 #include "thread_common.h"
 #include "liblfds711.h"
 
-#define NUM_THREADS 2
 #define QSIZE (1 << 6)
-
 #define NUM_ITERATIONS 20000
 
 struct test_data {
@@ -47,17 +45,7 @@ int main()
     lfds711_queue_bmm_enqueue ( &qbmms, NULL, NULL );
   }
 
-  pthread_t tid[NUM_THREADS];
-  create_tasks  (tid, NUM_THREADS, fast_enqueue_dequeue_thread, (void*) &qbmms, false);
-  join_tasks (tid, NUM_THREADS);
-
-  //strcpy( td.name, "Madge The Skutter" );
-
-  //lfds711_queue_bmm_enqueue( &qbmms, NULL, &td );
-
-  //lfds711_queue_bmm_dequeue( &qbmms, NULL, &temp_td );
-
-  //printf( "skutter name = %s\n", temp_td->name );
+  spawn_thread_tasks  (fast_enqueue_dequeue_thread, (void*) &qbmms, false);
 
   lfds711_queue_bmm_cleanup( &qbmms, NULL );
   printf("Done!\n");

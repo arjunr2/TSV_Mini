@@ -3,10 +3,25 @@
 #include <stdbool.h>
 #include <stdlib.h>
 
-static void create_tasks(pthread_t *tid, int num_threads, void *(*fn)(void*), 
+#define NUM_THREADS 2
+
+static void create_tasks_unsafe(pthread_t *tid, int num_threads, void *(*fn)(void*), 
     void* args, bool tid_arg) {
   for (int i = 0; i < num_threads; i++) {
     if (tid_arg) { args = &i; }
+    if (pthread_create(&tid[i], NULL, fn, args)) {
+      printf("Failed to create thread\n");
+      exit(1);
+    }
+  }
+}
+
+static void create_tasks_safe(pthread_t *tid, int num_threads, void *(*fn)(void*), 
+    void* args, bool tid_arg) {
+  int ids[NUM_THREADS];
+  for (int i = 0; i < num_threads; i++) {
+    ids[i] = i;
+    if (tid_arg) { args = &ids[i]; }
     if (pthread_create(&tid[i], NULL, fn, args)) {
       printf("Failed to create thread\n");
       exit(1);
@@ -22,6 +37,13 @@ static void join_tasks(pthread_t *tid, int num_threads) {
     }
   }
 }
+
+static void spawn_thread_tasks(void *(*fn)(void*), void* args, bool tid_arg) {
+  pthread_t tid[NUM_THREADS];
+  create_tasks_safe (tid, NUM_THREADS, fn, args, tid_arg);
+  join_tasks (tid, NUM_THREADS);
+}
+
 
 
 static void init_mutex(pthread_mutex_t *lock) {

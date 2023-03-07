@@ -41,7 +41,8 @@ int main() {
   }
   else {
     init_mutex(&lock);
-    create_tasks (tid, NUM_THREADS, fib_thread, NULL, true);
+    /* Don't run spawn_thread_tasks to prove unsafe create */
+    create_tasks_unsafe (tid, NUM_THREADS, fib_thread, NULL, true);
     join_tasks (tid, NUM_THREADS);
     destroy_mutex(&lock);
     result = fibonacci[0];

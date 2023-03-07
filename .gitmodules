@@ -4,3 +4,6 @@
 [submodule "wasm-micro-runtime"]
 	path = wasm-micro-runtime
 	url = https://github.com/SilverLineFramework/wasm-micro-runtime
+[submodule "tests/dataracebench"]
+	path = tests/dataracebench
+	url = https://github.com/LLNL/dataracebench
