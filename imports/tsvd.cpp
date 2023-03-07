@@ -98,11 +98,13 @@ void logaccess_wrapper(wasm_exec_env_t exec_env, uint32_t addr, uint32_t opcode,
 
   access_record cur_access {exec_env, inst_idx, opcode, addr};
   tsv_entry *entry = tsv_table + addr;
+  /* Only one thread sets/checks the probe at any time 
+  * Unlock happens within if-else block to allow unlocking before the delay */
+  entry->access_mtx.lock();
   bool probed = entry->probe.exchange(true);
   /* If not probed, setup probe info and delay */
   if (!probed) {
     /* Access record must be updated atomically */
-    entry->access_mtx.lock();
     entry->access = cur_access;
     entry->access_mtx.unlock();
     delay(DELAY);
@@ -111,7 +113,6 @@ void logaccess_wrapper(wasm_exec_env_t exec_env, uint32_t addr, uint32_t opcode,
   /* If probed, check if at least one write from different thread */
   else {
     /* Access checked atomically */
-    entry->access_mtx.lock();
     if (exec_env != entry->access.tid) {
       const opaccess opacc1 = opcode_access[entry->access.opcode];
       const opaccess opacc2 = opcode_access[opcode];
@@ -128,6 +129,7 @@ void logaccess_wrapper(wasm_exec_env_t exec_env, uint32_t addr, uint32_t opcode,
         #endif
         violation_mtx.unlock();
       }
+      /* Probed accesses from different threads recorded */
       entry->freq_diff_tid_consec++;
     }
     entry->access_mtx.unlock();

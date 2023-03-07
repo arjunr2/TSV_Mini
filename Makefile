@@ -15,7 +15,7 @@ TEST_C := $(notdir $(wildcard $(TEST_DIR)/*.c))
 
 WASM_O := $(addprefix $(WASM_DIR)/, $(TEST_C:.c=.wasm))
 
-AARCH64_AOT_O := $(TEST_C:.c=.aarch64.aot)
+#AARCH64_AOT_O := $(TEST_C:.c=.aarch64.aot)
 X86_64_AOT_O := $(TEST_C:.c=.aot)
 AOT_O := $(addprefix $(AOT_DIR)/, $(X86_64_AOT_O) $(AARCH64_AOT_O))
 
