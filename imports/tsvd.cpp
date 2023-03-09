@@ -74,8 +74,7 @@ size_t table_size = sizeof(tsv_entry) * ((size_t)1 << 32);
 struct inst_entry {
   std::atomic_llong freq;
 };
-inst_entry *instruction_map;
-uint32_t inst_count;
+std::vector<inst_entry> instruction_map;
 /*  */
 
 
@@ -161,7 +160,6 @@ void logend_wrapper(wasm_exec_env_t exec_env) {
   if (status == -1) {
     perror("munmap error");
   }
-  delete instruction_map;
 }
 
 
@@ -175,15 +173,15 @@ void init_tsv_table() {
   }
 }
 
-void logstart_wrapper(wasm_exec_env_t exec_env, uint32_t num_instructions) {
+void logstart_wrapper(wasm_exec_env_t exec_env, uint32_t max_instructions) {
   static std::atomic_bool first {false};
   static std::atomic_bool init_done {false};
   /* Init functions should only happen once */
   if (first.exchange(true) == false) {
     init_tsv_table();
-    printf("Num instructions: %u\n", num_instructions);
-    inst_count = num_instructions;
-    instruction_map = new inst_entry[num_instructions];
+    printf("Max instructions: %u\n", max_instructions);
+    std::vector<inst_entry> inst_map_temp(max_instructions);
+    instruction_map = std::move(inst_map_temp);
     init_done = true;
     start_ts = gettime();
   } 

@@ -117,14 +117,12 @@ void logend_wrapper(wasm_exec_env_t exec_env) {
 
   std::ofstream outfile(logfile, std::ios::out | std::ios::binary);
   std::vector<uint32_t> inst_idxs(shared_inst_idxs.begin(), shared_inst_idxs.end());
-  uint64_t num_bytes = inst_idxs.size() * sizeof(uint32_t);
   for (auto &i : inst_idxs) {
     printf("%u ", i);
   }
   printf("\n");
 
-  uint32_t arr_size = inst_idxs.empty() ? 0 : inst_idxs.back() + 1;
-  outfile.write((char*) &arr_size, 4);
+  uint64_t num_bytes = inst_idxs.size() * sizeof(uint32_t);
   outfile.write((char*) inst_idxs.data(), num_bytes);
   printf("Written data to %s\n", logfile);
   #endif
@@ -144,7 +142,7 @@ void init_acc_table() {
   }
 }
 
-void logstart_wrapper(wasm_exec_env_t exec_env) {
+void logstart_wrapper(wasm_exec_env_t exec_env, uint32_t max_instructions) {
   static std::atomic_bool first {false};
   static bool first_done = false;
   /* Init functions should only happen once */
@@ -164,7 +162,7 @@ void logstart_wrapper(wasm_exec_env_t exec_env) {
 #define REG_NATIVE_FUNC(func_name, sig) \
   { #func_name, (void*) func_name##_wrapper, sig, NULL }
 static NativeSymbol native_symbols[] = {
-  REG_NATIVE_FUNC(logstart, "()"),
+  REG_NATIVE_FUNC(logstart, "(i)"),
   REG_NATIVE_FUNC(logaccess, "(iii)"),
   REG_NATIVE_FUNC(logend, "()")
 };
