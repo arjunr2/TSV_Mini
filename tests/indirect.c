@@ -61,6 +61,7 @@ Data race pair: xa1[idx]@128:5:W vs. xa2[idx]@129:5:W
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include "thread_common.h"
 
 #define N 180
 int indexSet[N] = {
@@ -100,19 +101,35 @@ int indexSet[N] = {
 1977, 1979, 1981, 1983, 1985, 1987,
 2003, 2005, 2007, 2009, 2011, 2013};
 
-int main (int argc, char* argv[])
+
+double *xa1;
+double *xa2;
+
+void *task_thread(void *arg) {
+  int id = *((int*)arg);
+  for (int j = 0; j < 200; j++) {
+    for (int i = id; i < N; i += NUM_THREADS) {
+      int idx = indexSet[i];
+      xa1[idx] += 1.0 + i;
+      xa2[idx] += 3.0 + i;
+    }
+  }
+  return NULL;
+}
+
+int main ()
 {
   // max index value is 2013. +12 to obtain a valid xa2[idx] after xa1+12.
   // +1 to ensure a reference like base[2015] is within the bound.
   double * base = (double*) malloc(sizeof(double)* (2013+12+1));
-  if (base == 0)
+  if (base == NULL)
   {
     printf ("Error in malloc(). Aborting ...\n");
     return 1;  
   }
 
-  double * xa1 = base;
-  double * xa2 = xa1 + 12;
+  xa1 = base;
+  xa2 = xa1 + 12;
   int i;
 
   // initialize segments touched by indexSet
@@ -120,14 +137,8 @@ int main (int argc, char* argv[])
   {
     base[i]=0.5*i;
   }
-// default static even scheduling may not trigger data race, using static,1 instead.
-#pragma omp parallel for schedule(static,1)
-  for (i =0; i< N; ++i) 
-  {
-    int idx = indexSet[i];
-    xa1[idx]+= 1.0 + i;
-    xa2[idx]+= 3.0 + i;
-  }
+
+  spawn_thread_tasks(task_thread, NULL, true);
 
   printf("x1[999]=%f xa2[1285]=%f\n", xa1[999], xa2[1285]);
   free (base);

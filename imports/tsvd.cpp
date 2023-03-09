@@ -122,9 +122,6 @@ void logaccess_wrapper(wasm_exec_env_t exec_env, uint32_t addr, uint32_t opcode,
         std::pair<ViolationSet::iterator, bool> result = violation_set.insert(std::make_pair(entry->access, cur_access));
         #if TRACE_VIOLATION == 1
         printf("Current violation: %d, %d\n", entry->access.inst_idx, cur_access.inst_idx);
-        if (!result.second) {
-          printf("Duplicate found : %d, %d\n", result.first->first.inst_idx, result.first->second.inst_idx);
-        }
         #endif
         violation_mtx.unlock();
       }

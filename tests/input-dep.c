@@ -16,6 +16,12 @@ for details.
 
 #include <stdio.h>
 #include <stdlib.h>
+#include "thread_common.h"
+
+#define N 10001
+#define THRESHOLD 10000
+
+int A[N];
 
 void load_from_input(int *data, int size)
 {
@@ -25,27 +31,24 @@ void load_from_input(int *data, int size)
 }
 
 
-int main(int argc, char *argv[]) {
+void *task_thread(void *arg) {
+  int id = *((int*)arg);
+  for (int j = 0; j < 100; j++) {
+    for (int i = id; i < N; i += NUM_THREADS) {
+      A[i] = i;
+      if (N > THRESHOLD) {
+        A[0] = 1;
+      }
+    }
+  }
+  return NULL;
+}
 
-  int *A; 
-  int N = 100;
-
-  if (argc>1)
-    N = atoi(argv[1]);
-
-  A = (int*) malloc(sizeof(int) * N);
+int main() {
 
   load_from_input(A, N);
   
-#pragma omp parallel for shared(A)
-  for(int i = 0; i < N; i++) {
-    A[i] = i;
-    if (N > 10000) 
-    { 
-      A[0] = 1; 
-    }
-  }
+  spawn_thread_tasks(task_thread, NULL, true);
 
-  free(A);
   return 0;
 }
