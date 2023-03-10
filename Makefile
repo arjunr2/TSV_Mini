@@ -36,7 +36,7 @@ AOT_TSV_O := $(addprefix $(AOT_DIR)/, $(SHARED_ACC_BINS:.shared_acc.bin=.aot.tsv
 BATCH_SIZE := 2
 BATCH_RANGE := $(shell seq --separator=' ' $(BATCH_SIZE)) 
 
-TEST_WASM_ACC_BATCH := $(foreach wasm, $(TEST_WASM), $(foreach idx, $(BATCH_RANGE), p$(idx).$(wasm).accinst))
+TEST_WASM_ACC_BATCH := $(foreach wasm, $(TEST_WASM), $(foreach idx, $(BATCH_RANGE), part$(idx).$(wasm).accinst))
 TEST_AOT_ACC_BATCH := $(TEST_WASM_ACC_BATCH:.wasm.accinst=.aot.accinst)
 
 WASM_ACC_BATCH_O := $(addprefix $(WASM_DIR)/, $(TEST_WASM_ACC_BATCH))
@@ -76,17 +76,17 @@ setup:
 access: base $(AOT_ACC_O)
 	mkdir -p $(SHARED_ACC_DIR)
 
-access-batch: base $(AOT_ACC_BATCH_O)
+access-batch: $(AOT_ACC_BATCH_O)
 	mkdir -p $(SHARED_ACC_DIR)
 
 # Batch override for access inst: only run once
 .SECONDARY: $(WASM_ACC_BATCH_O)
 .ONESHELL:
-$(WASM_DIR)/p1.%.wasm.accinst: $(WASM_DIR)/%.wasm
+$(WASM_DIR)/part1.%.wasm.accinst: $(WASM_DIR)/%.wasm
 	./instrument -s memaccess-stochastic -a "$(STOCH) $(BATCH_SIZE)" -o $<.accinst $<
 	for idx in $(BATCH_RANGE) ; do \
-		wasm2wat --enable-threads $(WASM_DIR)/p$$idx.$*.wasm.accinst -o \
-		$(WASM_DIR)/p$$idx.$*.wat.accinst;	\
+		wasm2wat --enable-threads $(WASM_DIR)/part$$idx.$*.wasm.accinst -o \
+		$(WASM_DIR)/part$$idx.$*.wat.accinst;	\
 	done
 
 
@@ -94,15 +94,18 @@ $(WASM_DIR)/p1.%.wasm.accinst: $(WASM_DIR)/%.wasm
 tsv: base $(AOT_TSV_O)
 	mkdir -p $(VIOLATION_DIR)
 
-# Input batchfile (can be a normal single file, batch file, or p file)
+# Input file can be:
+# A normal single file: Handled by default
+# Batch file: Overriden here since they instrument the original file
+# No support for Part file in TSV; convert it to a batch file
 .ONESHELL:
 $(WASM_DIR)/batch.%.wasm.tsvinst: $(SHARED_ACC_DIR)/batch.%.shared_acc.bin $(WASM_DIR)/%.wasm
 	./instrument -s memshared -a $< -o $@ $(WASM_DIR)/$*.wasm
 	wasm2wat --enable-threads $@ -o $(WASM_DIR)/batch.$*.wat.tsvinst
 
-$(WASM_DIR)/p%.wasm.tsvinst: $(SHARED_ACC_DIR)/batch.%.shared_acc.bin $(WASM_DIR)/%.wasm
-	./instrument -s memshared -a $< -o $@ $(WASM_DIR)/$*.wasm
-	wasm2wat --enable-threads $@ -o $(WASM_DIR)/batch.$*.wat.tsvinst
+#$(WASM_DIR)/part1.%.wasm.tsvinst: $(SHARED_ACC_DIR)/part1.%.shared_acc.bin $(WASM_DIR)/%.wasm
+#	./instrument -s memshared -a $< -o $@ $(WASM_DIR)/$*.wasm
+#	wasm2wat --enable-threads $@ -o $(WASM_DIR)/part1.$*.wat.tsvinst
 
 
 
@@ -163,5 +166,5 @@ clean-tools:
 	make -C $(TEST_DIR) clean
 
 clean-logs:
-	rm -rf $(SHARED_ACC_DIR) $(VIOLATION_DIR)
+	rm -rf $(SHARED_ACC_DIR)
 
