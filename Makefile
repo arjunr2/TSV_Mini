@@ -37,7 +37,7 @@ BATCH_SIZE := 2
 BATCH_RANGE := $(shell seq --separator=' ' $(BATCH_SIZE)) 
 
 TEST_WASM_ACC_BATCH := $(foreach wasm, $(TEST_WASM), $(foreach idx, $(BATCH_RANGE), p$(idx).$(wasm).accinst))
-TEST_AOT_ACC_BATCH := $(TEST_WASM_ACC_BATCH:.wasm=.aot)
+TEST_AOT_ACC_BATCH := $(TEST_WASM_ACC_BATCH:.wasm.accinst=.aot.accinst)
 
 WASM_ACC_BATCH_O := $(addprefix $(WASM_DIR)/, $(TEST_WASM_ACC_BATCH))
 AOT_ACC_BATCH_O := $(addprefix $(AOT_DIR)/, $(TEST_AOT_ACC_BATCH))
@@ -50,24 +50,13 @@ STOCH := 60
 .PHONY: base access
 .PHONY: instrument native-lib 
 .PHONY: clean clean-tests clean-tools
+.PHONY: tests tests-batch setup
 
 ## BASE PHASE
 base: native-lib instrument tests
-
-## PHASE 1
-access: base $(AOT_ACC_O)
-	mkdir -p $(SHARED_ACC_DIR)
-
-## PHASE 2
-tsv: $(AOT_TSV_O)
-	mkdir -p $(VIOLATION_DIR)
-
-batch: native-lib instrument tests-batch
-
 instrument:
 	make -j6 -C $(INSTRUMENT_DIR)
 	cp $(INSTRUMENT_DIR)/instrument .
-
 
 .ONESHELL:
 native-lib:
@@ -75,15 +64,7 @@ native-lib:
 	cp $(IMPORT_DIR)/libaccess.so .
 	cp $(IMPORT_DIR)/libtsvd.so .
 
-
-.PHONY: tests tests-batch setup
 tests: setup $(AOT_O)
-
-tests-batch: setup $(AOT_ACC_BATCH_O)
-	@echo $(WASM_ACC_BATCH_O)
-	@echo $(AOT_ACC_BATCH_O)
-
-
 .ONESHELL:
 setup:
 	mkdir -p $(WASM_DIR)
@@ -91,16 +72,37 @@ setup:
 	make -C $(TEST_DIR)
 
 
+## PHASE 1 (can happen along with base)
+access: base $(AOT_ACC_O)
+	mkdir -p $(SHARED_ACC_DIR)
 
-define ACC_BATCH_COMPILE = 
-.ONESHELL:
-$$(WASM_DIR)/p$(1).%.wasm.accinst: $$(WASM_DIR)/%.wasm
-	./instrument -s memaccess-stochastic -a "$$(STOCH) $$(BATCH_SIZE)" -o $$<.accinst $$<
-endef
+access-batch: base $(AOT_ACC_BATCH_O)
+	mkdir -p $(SHARED_ACC_DIR)
 
-# WASM Batch Generation
+# Batch override for access inst: only run once
 .SECONDARY: $(WASM_ACC_BATCH_O)
-$(foreach idx, $(BATCH_RANGE), $(eval $(call ACC_BATCH_COMPILE,$(idx))))
+.ONESHELL:
+$(WASM_DIR)/p1.%.wasm.accinst: $(WASM_DIR)/%.wasm
+	./instrument -s memaccess-stochastic -a "$(STOCH) $(BATCH_SIZE)" -o $<.accinst $<
+	for idx in $(BATCH_RANGE) ; do \
+		wasm2wat --enable-threads $(WASM_DIR)/p$$idx.$*.wasm.accinst -o \
+		$(WASM_DIR)/p$$idx.$*.wat.accinst;	\
+	done
+
+
+## PHASE 2
+tsv: base $(AOT_TSV_O)
+	mkdir -p $(VIOLATION_DIR)
+
+# Batch override for tsv inst: only run once
+.SECONDARY: $(WASM_TSV_BATCH_O)
+.ONESHELL:
+$(WASM_DIR)/p1.%.wasm.tsvinst: $(WASM_DIR)/%.wasm
+	./instrument -s memshared-stochastic -a "$(STOCH) $(BATCH_SIZE)" -o $<.accinst $<
+	for idx in $(BATCH_RANGE) ; do \
+		wasm2wat --enable-threads $(WASM_DIR)/p$$idx.$*.wasm.accinst -o \
+		$(WASM_DIR)/p$$idx.$*.wat.accinst;	\
+	done
 
 
 
@@ -143,7 +145,7 @@ $(AOT_DIR)/%.aot.tsvinst: $(WASM_DIR)/%.wasm.tsvinst
 	$(WAMRC) --enable-multi-thread -o $@ $<
 
 .SECONDARY: $(WASM_TSV_O)
-$(WASM_DIR)/%.wasm.tsvinst: $(SHARED_ACC_DIR)/%.shared_acc.bin
+$(WASM_DIR)/%.wasm.tsvinst: $(SHARED_ACC_DIR)/%.shared_acc.bin $(WASM_DIR)/%.wasm 
 	./instrument -s memshared -a $< -o $@ $(WASM_DIR)/$*.wasm
 	wasm2wat --enable-threads $@ -o $(WASM_DIR)/$*.wat.tsvinst
 
