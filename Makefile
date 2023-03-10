@@ -94,15 +94,15 @@ $(WASM_DIR)/p1.%.wasm.accinst: $(WASM_DIR)/%.wasm
 tsv: base $(AOT_TSV_O)
 	mkdir -p $(VIOLATION_DIR)
 
-# Batch override for tsv inst: only run once
-.SECONDARY: $(WASM_TSV_BATCH_O)
+# Input batchfile (can be a normal single file, batch file, or p file)
 .ONESHELL:
-$(WASM_DIR)/p1.%.wasm.tsvinst: $(WASM_DIR)/%.wasm
-	./instrument -s memshared-stochastic -a "$(STOCH) $(BATCH_SIZE)" -o $<.accinst $<
-	for idx in $(BATCH_RANGE) ; do \
-		wasm2wat --enable-threads $(WASM_DIR)/p$$idx.$*.wasm.accinst -o \
-		$(WASM_DIR)/p$$idx.$*.wat.accinst;	\
-	done
+$(WASM_DIR)/batch.%.wasm.tsvinst: $(SHARED_ACC_DIR)/batch.%.shared_acc.bin $(WASM_DIR)/%.wasm
+	./instrument -s memshared -a $< -o $@ $(WASM_DIR)/$*.wasm
+	wasm2wat --enable-threads $@ -o $(WASM_DIR)/batch.$*.wat.tsvinst
+
+$(WASM_DIR)/p%.wasm.tsvinst: $(SHARED_ACC_DIR)/batch.%.shared_acc.bin $(WASM_DIR)/%.wasm
+	./instrument -s memshared -a $< -o $@ $(WASM_DIR)/$*.wasm
+	wasm2wat --enable-threads $@ -o $(WASM_DIR)/batch.$*.wat.tsvinst
 
 
 
