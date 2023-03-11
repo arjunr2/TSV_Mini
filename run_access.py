@@ -1,3 +1,5 @@
+#!/usr/bin/python3
+
 import sys
 import struct
 import subprocess
@@ -29,15 +31,19 @@ def file_type(s):
         return 'norm'
 
 
-def run_inst(exec_path):
+def run_inst(exec_path, header=True):
     fpath = str(exec_path)
-    print (f"--> Test {fpath} <--")
-    subprocess.run("iwasm --native-lib=./libaccess.so "
-            f"{fpath} > /dev/null", shell=True, check=True)   
+    if header:
+        print (f"--> Test {fpath} <--")
+    result = subprocess.run(f"iwasm --native-lib=./libaccess.so {fpath}",
+            shell=True, check=True, capture_output=True, text=True,
+            universal_newlines=True)
     filename = '.'.join(exec_path.name.split('.')[:-2])
     bin_target = shared_acc_dir / Path(filename + '.shared_acc.bin')
     subprocess.run(f"mkdir -p {shared_acc_dir}; "
             f"mv shared_mem.bin {str(bin_target)}", shell=True)
+    
+    return result.stderr[12:-1]
 
 
 def aggregate_bins(bin_paths, out_path):
@@ -67,17 +73,28 @@ def aggregate_bins(bin_paths, out_path):
     for bin_path in bin_path_list:
         bin_path.unlink()
 
-    print(sorted_ints)
+    return sorted_ints
 
 
 def run_batch_test (test_name):
-    for part_file in aot_dir.glob(f"part*.{test_name}.aot.accinst"):
-        run_inst(part_file)
+    print(f"<-- Batch: {test_name} -->")
+    run_times = []
+    for part_file in sorted(aot_dir.glob(f"part*.{test_name}.aot.accinst")):
+        run_times.append(float(run_inst(part_file, header=False)))
 
-    out_path = shared_acc_dir / Path(f"batch.{test_name}.shared_acc.bin")
+    out_path = shared_acc_dir / f"batch.{test_name}.shared_acc.bin"
     # Aggregate results from run
-    aggregate_bins ( shared_acc_dir.glob(f"part*.{test_name}.shared_acc.bin"), \
+    sorted_idxs = aggregate_bins ( shared_acc_dir.glob(f"part*.{test_name}.shared_acc.bin"), \
                         out_path)
+
+    print("Max Time: ", max(run_times))
+    # Print accuracy if possible
+    try:
+        single_result = shared_acc_dir / f"{test_name}.shared_acc.bin"
+        optimal_size = single_result.stat().st_size // 4
+        print("Accuracy: ", (len(sorted_idxs) / optimal_size) * 100)
+    except OSError:
+        print("Accuracy: N/A")
 
 
 def main():
@@ -86,19 +103,20 @@ def main():
     
     if args.mode == "single":
         if args.files[0] == "all":
-            for exec_path in aot_dir.glob('*.aot.accinst'):
+            for exec_path in sorted(aot_dir.glob('*.aot.accinst')):
                 if (file_type(exec_path) == "norm"):
-                    run_inst(exec_path)
+                    print("Time: ", run_inst(exec_path))
+
         else:
             for exec_path in args.files:
-                run_inst(exec_path)
+                print("Time: ", run_inst(exec_path))
 
     else:
         if args.files[0] == "all":
             test_map = {}
             test_names = { str(part_file).split('.')[1] for part_file in aot_dir.glob(f"part*.aot.accinst") }
 
-            for test_name in test_names:
+            for test_name in sorted(test_names):
                 run_batch_test (test_name)
 
         else:
