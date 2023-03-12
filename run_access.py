@@ -80,7 +80,6 @@ def run_batch_test (test_name, batch_size):
     run_times = []
     for part_file in sorted(aot_dir.glob(f"part*.{test_name}.aot.accinst")):
         batch_id = int(part_file.name.split('.')[0][4:])
-        print(batch_id)
         if batch_id <= batch_size:
             run_times.append(float(run_inst(part_file, header=False)))
 
