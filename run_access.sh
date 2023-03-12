@@ -45,4 +45,7 @@ elif [ "$1" = "batch" ]; then
     rm $SHARED_ACC_DIR/part*.$test_name.shared_acc.bin
   done
 
+else
+  run_script $1
 fi
+
