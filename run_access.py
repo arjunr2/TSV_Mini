@@ -13,9 +13,8 @@ aot_dir = Path('aots')
 def _parse_main():
     p = ArgumentParser(
             description="Shared access instrumentation script")
-    p.add_argument("--mode", default = "single", 
-            choices = ["single", "batch"], 
-            help = "Mode to run")
+    p.add_argument("--batch", default = 0, type=int,
+            help = "Run in batch mode with given batch size")
     p.add_argument("files", nargs='+',
             help = "Files to run ('all' for all files)")
     return p
@@ -76,11 +75,14 @@ def aggregate_bins(bin_paths, out_path):
     return sorted_ints
 
 
-def run_batch_test (test_name):
+def run_batch_test (test_name, batch_size):
     print(f"<-- Batch: {test_name} -->")
     run_times = []
     for part_file in sorted(aot_dir.glob(f"part*.{test_name}.aot.accinst")):
-        run_times.append(float(run_inst(part_file, header=False)))
+        batch_id = int(part_file.name.split('.')[0][4:])
+        print(batch_id)
+        if batch_id <= batch_size:
+            run_times.append(float(run_inst(part_file, header=False)))
 
     out_path = shared_acc_dir / f"batch.{test_name}.shared_acc.bin"
     # Aggregate results from run
@@ -101,7 +103,20 @@ def main():
     p = _parse_main()
     args = p.parse_args()
     
-    if args.mode == "single":
+
+    if args.batch:
+        if args.files[0] == "all":
+            test_map = {}
+            test_names = { str(part_file).split('.')[1] for part_file in aot_dir.glob(f"part*.aot.accinst") }
+
+            for test_name in sorted(test_names):
+                run_batch_test (test_name, args.batch)
+
+        else:
+            for test_name in args.files:
+                run_batch_test (test_name)
+
+    else:
         if args.files[0] == "all":
             for exec_path in sorted(aot_dir.glob('*.aot.accinst')):
                 if (file_type(exec_path) == "norm"):
@@ -110,18 +125,6 @@ def main():
         else:
             for exec_path in args.files:
                 print("Time: ", run_inst(exec_path))
-
-    else:
-        if args.files[0] == "all":
-            test_map = {}
-            test_names = { str(part_file).split('.')[1] for part_file in aot_dir.glob(f"part*.aot.accinst") }
-
-            for test_name in sorted(test_names):
-                run_batch_test (test_name)
-
-        else:
-            for test_name in args.files:
-                run_batch_test (test_name)
             
 
 if __name__ == '__main__':
