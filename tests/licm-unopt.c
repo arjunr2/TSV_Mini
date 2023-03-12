@@ -27,6 +27,8 @@ void *task_thread2(void *arg) {
   return NULL;
 }
 
+/* Program intent is to compute a = LOOP_CT * (y^2 + yz) */
+/* Perfomed in Thread1, and Thread2 is an interfering data-race task */
 int main() {
   pthread_t tid[2];
   pthread_create(&tid[0], NULL, task_thread1, NULL);
