@@ -113,7 +113,7 @@ def main():
 
         else:
             for test_name in args.files:
-                run_batch_test (test_name)
+                run_batch_test (Path(test_name), args.batch)
 
     else:
         if args.files[0] == "all":
@@ -123,7 +123,7 @@ def main():
 
         else:
             for exec_path in args.files:
-                print("Time: ", run_inst(exec_path))
+                print("Time: ", run_inst(Path(exec_path)))
             
 
 if __name__ == '__main__':
