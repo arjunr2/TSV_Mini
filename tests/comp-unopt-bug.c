@@ -9,10 +9,8 @@ volatile int a = 0;
 
 void *task_thread1(void *arg) {
   printf("Start1\n");
-  volatile int x;
   for (int i = 0; i < LOOP_CT; i++) {
-    x = y + z;
-    a += x * y;
+    a += y * z;
   }
   printf("Done1\n");
   return NULL;
@@ -21,7 +19,7 @@ void *task_thread1(void *arg) {
 void *task_thread2(void *arg) {
   printf("Start2\n");
   int l = 0;
-  for (int i = 0; i < LOOP_CT; i++) {
+  for (int i = 0; i < 5 * LOOP_CT; i++) {
     l += 1;
     y = 32;
   }
