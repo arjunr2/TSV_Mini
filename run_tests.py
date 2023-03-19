@@ -121,7 +121,7 @@ def run_batch_test (test_name, batch_size, run_inst):
     try:
         single_result = shared_acc_dir / f"{test_name}.shared_acc.bin"
         optimal_size = single_result.stat().st_size // 4
-        print("Accuracy: ", (len(sorted_idxs) / optimal_size) * 100)
+        print("Accuracy: {:.2f}".format((len(sorted_idxs) / optimal_size) * 100))
     except OSError:
         print("Accuracy: N/A")
 
@@ -140,10 +140,10 @@ def run_access(args, run_inst):
         test_names = { str(part_file).split('.')[1] for part_file in \
                             aot_dir.glob(f"part*.aot.accinst") } \
                             if args.files[0] == "all" \
-                            else [Path(f) for f in args.files] 
+                            else args.files
 
         for test_name in sorted(test_names):
-            run_batch_test (test_names, args.batch, run_inst)
+            run_batch_test (test_name, args.batch, run_inst)
     
     else:
         file_args = [f for f in aot_dir.glob('*.aot.accinst') \
