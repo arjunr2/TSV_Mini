@@ -4,6 +4,7 @@
 #include <sys/mman.h>
 
 #include "wasm_export.h"
+#include "wasmdefs.h"
 
 #include <map>
 #include <set>
@@ -14,7 +15,7 @@
 #include <atomic>
 
 #define INSTRUMENT 1
-#define TRACE_ACCESS 0
+#define TRACE_ACCESS 1
 
 /* Timing */
 uint64_t start_ts;
@@ -35,10 +36,12 @@ typedef std::unordered_set<uint32_t> InstSet;
 
 /* Access Logger */
 struct acc_entry {
-  wasm_exec_env_t last_tid;
+  uint64_t last_tid;
   InstSet inst_idxs;
   uint64_t freq;
   bool shared;
+  bool write_encountered;
+  std::mutex mtx;
 };
 
 std::mutex mtx;
@@ -47,18 +50,21 @@ size_t table_size = sizeof(acc_entry) * ((size_t)1 << 32);
 uint32_t addr_min = -1;
 uint32_t addr_max = 0;
 
+std::mutex shared_inst_mtx;
 std::set<uint32_t> shared_inst_idxs;
 /*  */
 
-
 void logaccess_wrapper(wasm_exec_env_t exec_env, uint32_t addr, uint32_t opcode, uint32_t inst_idx) {
   #if INSTRUMENT == 1
-  mtx.lock();
+  uint64_t tid = wasm_runtime_get_exec_env_uid(exec_env);
+  bool is_write = (opcode_access[opcode].type == STORE);
   #if TRACE_ACCESS == 1
-  printf("I: %u | A: %u\n", inst_idx, addr); 
+  printf("I: %u | A: %u | T: %lu\n", inst_idx, addr, tid);
   #endif
   acc_entry *entry = access_table + addr;
-  bool new_tid_acc = (exec_env != entry->last_tid);
+
+  entry->mtx.lock();
+  bool new_tid_acc = (tid != entry->last_tid);
   /* First access to address: Construct instruction set */
   if (!entry->last_tid) {
     new (&entry->inst_idxs) InstSet;
@@ -66,12 +72,16 @@ void logaccess_wrapper(wasm_exec_env_t exec_env, uint32_t addr, uint32_t opcode,
   }
   /* Shared accesses from any thread write to global set */
   else if (entry->shared) {
+    shared_inst_mtx.lock();
     shared_inst_idxs.insert(inst_idx);
+    shared_inst_mtx.unlock();
   }
   /* Unshared access from new thread: Mark as shared and append logged insts */
   else if (new_tid_acc) {
     entry->shared = true;
+    shared_inst_mtx.lock();
     shared_inst_idxs.insert(entry->inst_idxs.begin(), entry->inst_idxs.end());
+    shared_inst_mtx.unlock();
     /* Save some memory by deleting unused set */
     entry->inst_idxs.~InstSet();
   }
@@ -79,11 +89,13 @@ void logaccess_wrapper(wasm_exec_env_t exec_env, uint32_t addr, uint32_t opcode,
   else {
     entry->inst_idxs.insert(inst_idx);
   }
-  entry->last_tid = exec_env;
+  entry->last_tid = tid;
   entry->freq += 1;
+  entry->write_encountered = is_write;
+  entry->mtx.unlock();
+
   addr_min = (addr < addr_min) ? addr : addr_min;
   addr_max = (addr > addr_max) ? addr : addr_max;
-  mtx.unlock();
   #endif
 }
 
@@ -114,6 +126,10 @@ void logend_wrapper(wasm_exec_env_t exec_env) {
       }
     }
   }
+  
+  //printf("TUID Table: ");
+  //for (auto &i : tuid_table) { printf("%ld ", i); };
+  //printf("\n");
 
   std::ofstream outfile(logfile, std::ios::out | std::ios::binary);
   std::vector<uint32_t> inst_idxs(shared_inst_idxs.begin(), shared_inst_idxs.end());
