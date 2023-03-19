@@ -84,7 +84,9 @@ def run_inst_access(exec_path, header=True):
     subprocess.run(f"mkdir -p {shared_acc_dir}; "
             f"mv shared_mem.bin {str(bin_target)}", shell=True)
     
-    return result.stderr[12:-1]
+    time_str = re.search("Time:\s*(.*)", result.stderr).group(1)
+    
+    return time_str
 
 
 def run_inst_normal(exec_path):
@@ -93,7 +95,7 @@ def run_inst_normal(exec_path):
     result = subprocess.run(f"time iwasm {fpath}",
             shell=True, check=True, capture_output=True, text=True,
             universal_newlines=True)
-    filename = '.'.join(exec_path.name.split('.')[:-2])
+
     mins, secs = re.search("real\s*(.*)m(.*)s", result.stderr).group(1, 2)
     exec_time = float(mins) * 60 + float(secs)
     
@@ -102,7 +104,7 @@ def run_inst_normal(exec_path):
 
 # Batch runs for each mode
 def run_batch_test (test_name, batch_size, run_inst):
-    print(f"<-- Batch: {test_name} -->")
+    print(f"--> Batch: {test_name} <--")
     run_times = []
     for part_file in sorted(aot_dir.glob(f"part*.{test_name}.aot.accinst")):
         batch_id = int(part_file.name.split('.')[0][4:])

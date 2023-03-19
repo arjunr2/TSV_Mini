@@ -139,7 +139,7 @@ void logend_wrapper(wasm_exec_env_t exec_env) {
   end_ts = gettime();
   float total_time = (float)(end_ts - start_ts) / 1000000; 
   printf("========= LOGEND ===========\n");
-  printf("Time taken: %.3f\n", total_time);
+  printf("Time: %.3f\n", total_time);
 
   #if INSTRUMENT == 1
   printf("Violations: %lu\n", violation_set.size());
