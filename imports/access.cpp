@@ -15,7 +15,7 @@
 #include <atomic>
 
 #define INSTRUMENT 1
-#define TRACE_ACCESS 1
+#define TRACE_ACCESS 0
 
 /* Timing */
 uint64_t start_ts;
@@ -99,6 +99,7 @@ void logaccess_wrapper(wasm_exec_env_t exec_env, uint32_t addr, uint32_t opcode,
   #endif
 }
 
+#define EWRITE(elem) outfile.write((char*) &elem, sizeof(elem));
 
 void logend_wrapper(wasm_exec_env_t exec_env) {
   end_ts = gettime();
@@ -108,6 +109,15 @@ void logend_wrapper(wasm_exec_env_t exec_env) {
 
   #if INSTRUMENT == 1
   char logfile[] = "shared_mem.bin";
+  std::ofstream outfile(logfile, std::ios::out | std::ios::binary);
+
+  std::vector<uint32_t> inst_idxs(shared_inst_idxs.begin(), shared_inst_idxs.end());
+  /* Dump print */
+  for (auto &i : inst_idxs) {
+    printf("%u ", i);
+  }
+  printf("\n");
+
   /* Read memory size from wamr API */
   uint32_t mem_size = wasm_runtime_get_memory_size(get_module_inst(exec_env));
   if (addr_max > mem_size) {
@@ -115,31 +125,33 @@ void logend_wrapper(wasm_exec_env_t exec_env) {
   }
   printf("Mem size: %u\n", mem_size);
   printf("Addr min: %u | Addr max: %u\n", addr_min, addr_max);
+
+  /* Log shared instructions */
+  uint32_t num_inst_idxs = inst_idxs.size();
+  EWRITE(num_inst_idxs);
+  outfile.write((char*) inst_idxs.data(), num_inst_idxs * sizeof(uint32_t));
+  /* Access table dump + unshared accesses log */
   printf("=== ACCESS TABLE ===\n");
-  for (uint64_t i = 0; i < mem_size; i++) {
+  for (uint32_t i = 0; i < mem_size; i++) {
     acc_entry *entry = access_table + i;
     if (entry->last_tid) {
       if (entry->shared) {
         printf("Addr [%lu] | Accesses: %lu [SHARED]\n", i, entry->freq);
       } else {
         printf("Addr [%lu] | Accesses: %lu\n", i, entry->freq);
+        /* Write partial content */
+        EWRITE(i);
+        EWRITE(entry->last_tid);
+        EWRITE(entry->write_encountered);
+        std::vector<uint32_t> entry_idxs(entry->inst_idxs.begin(), entry->inst_idxs.end());
+        uint32_t num_entry_idxs = entry_idxs.size();
+        printf("Addr: %u | Num entry: %u | Entry1: %u\n", i, num_entry_idxs, entry_idxs[0]);
+        EWRITE(num_entry_idxs);
+        outfile.write((char*) entry_idxs.data(), num_entry_idxs * sizeof(uint32_t));
       }
     }
   }
-  
-  //printf("TUID Table: ");
-  //for (auto &i : tuid_table) { printf("%ld ", i); };
-  //printf("\n");
 
-  std::ofstream outfile(logfile, std::ios::out | std::ios::binary);
-  std::vector<uint32_t> inst_idxs(shared_inst_idxs.begin(), shared_inst_idxs.end());
-  for (auto &i : inst_idxs) {
-    printf("%u ", i);
-  }
-  printf("\n");
-
-  uint64_t num_bytes = inst_idxs.size() * sizeof(uint32_t);
-  outfile.write((char*) inst_idxs.data(), num_bytes);
   printf("Written data to %s\n", logfile);
   #endif
   int status = munmap(access_table, table_size);
