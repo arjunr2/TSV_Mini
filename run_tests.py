@@ -37,6 +37,17 @@ def file_type(s):
         return 'norm'
 
 
+def merge_write_and_clean(sorted_ints, bin_path_list, out_path):
+    # Write sorted and unique integers to new binary file
+    with open(out_path, 'wb') as outfile:
+        for int_val in sorted_ints:
+            outfile.write(struct.pack('<i', int_val))
+
+    # Remove files
+    for bin_path in bin_path_list:
+        bin_path.unlink()
+    
+
 AccessRecord = namedtuple('AccessRecord', ['tid', 'has_write', 'inst_idxs'])
 
 def merge_access_bins(bin_paths, out_path):
@@ -118,8 +129,10 @@ def merge_access_bins(bin_paths, out_path):
                     else:
                         partials[addr] = acc_record
 
-    print(len(shared_idxs))
-    print(sorted(shared_idxs))
+    # Write merge and remove partitions
+    merge_write_and_clean(shared_idxs, bin_path_list, out_path)
+
+    return shared_idxs
 
 
 def aggregate_bins(bin_paths, out_path):
@@ -140,14 +153,8 @@ def aggregate_bins(bin_paths, out_path):
     # Sort and remove duplicates from the list
     sorted_ints = sorted(set(int_list))
 
-    # Write sorted and unique integers to new binary file
-    with open(out_path, 'wb') as outfile:
-        for int_val in sorted_ints:
-            outfile.write(struct.pack('<i', int_val))
-
-    # Remove files
-    for bin_path in bin_path_list:
-        bin_path.unlink()
+    # Write merge and remove partitions
+    merge_write_and_clean(sorted_ints, bin_path_list, out_path)
 
     return sorted_ints
 
@@ -200,17 +207,19 @@ def run_batch_test (test_name, batch_size, run_inst):
     # Aggregate results from run
     #sorted_idxs = aggregate_bins ( shared_acc_dir.glob(f"part*.{test_name}.shared_acc.bin"), \
     #                    out_path)
-    merge_access_bins ( shared_acc_dir.glob(f"part*.{test_name}.shared_acc.bin"), \
+    sorted_idxs = merge_access_bins ( shared_acc_dir.glob(f"part*.{test_name}.shared_acc.bin"), \
                         out_path)
 
     print("Max Time: ", max(run_times))
     # Print accuracy if possible
-    #try:
-    #    single_result = shared_acc_dir / f"{test_name}.shared_acc.bin"
-    #    optimal_size = single_result.stat().st_size // 4
-    #    print("Accuracy: {:.2f}".format((len(sorted_idxs) / optimal_size) * 100))
-    #except OSError:
-    #    print("Accuracy: N/A")
+    try:
+        single_result = shared_acc_dir / f"{test_name}.shared_acc.bin"
+        with open(single_result, 'rb') as f:
+            ct_bytes = f.read(4)
+            optimal_size, = struct.unpack("<I", ct_bytes)
+        print("Accuracy: {:.2f}".format((len(sorted_idxs) / optimal_size) * 100))
+    except OSError:
+        print("Accuracy: N/A")
 
 
 # Main run dispatchers
