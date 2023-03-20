@@ -83,7 +83,7 @@ access-batch: $(AOT_ACC_BATCH_O)
 .SECONDARY: $(WASM_ACC_BATCH_O)
 .ONESHELL:
 $(WASM_DIR)/part1.%.wasm.accinst: $(WASM_DIR)/%.wasm
-	./instrument -s memaccess-stochastic -a "$(STOCH) $(BATCH_SIZE)" -o $<.accinst $<
+	./instrument -s memaccess-balanced -a "$(BATCH_SIZE)" -o $<.accinst $<
 	for idx in $(BATCH_RANGE) ; do \
 		wasm2wat --enable-threads $(WASM_DIR)/part$$idx.$*.wasm.accinst -o \
 		$(WASM_DIR)/part$$idx.$*.wat.accinst;	\

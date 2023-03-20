@@ -9,7 +9,7 @@ def main():
     bin_path = sys.argv[1]
     offset = 0
     mylist = []
-    shared_idxs = []
+    shared_idxs = set()
     shared_addrs = set()
 
     with open(bin_path, 'rb') as f:
@@ -21,9 +21,8 @@ def main():
 
         sh_fmt = f"<{sh_ct}I"
         vec_end = offset + struct.calcsize(sh_fmt)
-        shared_idxs += list(struct.unpack_from(sh_fmt, byte_str, offset))
+        shared_idxs |= set(struct.unpack_from(sh_fmt, byte_str, offset))
         offset = vec_end
-        print(shared_idxs)
 
         # Read shared addrs
         (sh_ct,), offset = struct.unpack_from(sh_first, byte_str, offset), \
@@ -32,7 +31,6 @@ def main():
         vec_end = offset + struct.calcsize(sh_fmt);
         shared_addrs |= set(struct.unpack_from(sh_fmt, byte_str, offset))
         offset = vec_end
-        print(shared_addrs)
 
         # Read partials
         while offset != len(byte_str):
@@ -40,12 +38,13 @@ def main():
             acc, offset = AccessRecord._make(struct.unpack_from(first, byte_str, offset)), \
                 offset + struct.calcsize(first)
             second = f"<{acc.inst_idxs}I"
-            (entry_list,), offset = struct.unpack_from(second, byte_str, offset), \
+            entry_list, offset = struct.unpack_from(second, byte_str, offset), \
                 offset + struct.calcsize(second)
             acc = acc._replace(inst_idxs=entry_list)
-            print(acc)
             mylist.append(acc)
 
+    print(len(shared_idxs))
+    print(sorted(shared_idxs))
     
 
 main()
