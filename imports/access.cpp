@@ -81,6 +81,7 @@ void logaccess_wrapper(wasm_exec_env_t exec_env, uint32_t addr, uint32_t opcode,
     entry->shared = true;
     shared_inst_mtx.lock();
     shared_inst_idxs.insert(entry->inst_idxs.begin(), entry->inst_idxs.end());
+    shared_inst_idxs.insert(inst_idx);
     shared_inst_mtx.unlock();
     /* Save some memory by deleting unused set */
     entry->inst_idxs.~InstSet();
@@ -99,7 +100,19 @@ void logaccess_wrapper(wasm_exec_env_t exec_env, uint32_t addr, uint32_t opcode,
   #endif
 }
 
-#define EWRITE(elem) outfile.write((char*) &elem, sizeof(elem));
+#define FWRITE(elem) outfile.write((char*) &elem, sizeof(elem));
+
+#define BWRITE(elem) {  \
+  char* addr = (char*) &elem; \
+  partials.insert(partials.end(), addr, addr + sizeof(elem));  \
+}
+
+#define BWRITE_FIX(ptr, sz) { \
+  char* addr = (char*) ptr; \
+  partials.insert(partials.end(), addr, addr + sz); \
+}
+
+typedef uint8_t byte;
 
 void logend_wrapper(wasm_exec_env_t exec_env) {
   end_ts = gettime();
@@ -128,29 +141,41 @@ void logend_wrapper(wasm_exec_env_t exec_env) {
 
   /* Log shared instructions */
   uint32_t num_inst_idxs = inst_idxs.size();
-  EWRITE(num_inst_idxs);
+  FWRITE(num_inst_idxs);
   outfile.write((char*) inst_idxs.data(), num_inst_idxs * sizeof(uint32_t));
-  /* Access table dump + unshared accesses log */
+
+  std::vector<uint32_t> shared_addrs;
+  std::vector<byte> partials;
+
+  /* Access table dump  */
   printf("=== ACCESS TABLE ===\n");
   for (uint32_t i = 0; i < mem_size; i++) {
     acc_entry *entry = access_table + i;
     if (entry->last_tid) {
       if (entry->shared) {
-        printf("Addr [%lu] | Accesses: %lu [SHARED]\n", i, entry->freq);
+        printf("Addr [%u] | Accesses: %lu [SHARED]\n", i, entry->freq);
+        shared_addrs.push_back(i);
       } else {
-        printf("Addr [%lu] | Accesses: %lu\n", i, entry->freq);
+        printf("Addr [%u] | Accesses: %lu\n", i, entry->freq);
         /* Write partial content */
-        EWRITE(i);
-        EWRITE(entry->last_tid);
-        EWRITE(entry->write_encountered);
+        BWRITE (i);
+        BWRITE (entry->last_tid);
+        BWRITE (entry->write_encountered);
         std::vector<uint32_t> entry_idxs(entry->inst_idxs.begin(), entry->inst_idxs.end());
         uint32_t num_entry_idxs = entry_idxs.size();
-        printf("Addr: %u | Num entry: %u | Entry1: %u\n", i, num_entry_idxs, entry_idxs[0]);
-        EWRITE(num_entry_idxs);
-        outfile.write((char*) entry_idxs.data(), num_entry_idxs * sizeof(uint32_t));
+        BWRITE (num_entry_idxs);
+        BWRITE_FIX (entry_idxs.data(), num_entry_idxs * sizeof(uint32_t));
       }
     }
   }
+
+  /* Log shared addrs */
+  uint32_t num_shared_addrs = shared_addrs.size();
+  FWRITE(num_shared_addrs);
+  outfile.write((char*) shared_addrs.data(), num_shared_addrs * sizeof(uint32_t));
+
+  /* Log partial addr + idx */
+  outfile.write((char*) partials.data(), partials.size());
 
   printf("Written data to %s\n", logfile);
   #endif
