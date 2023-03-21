@@ -26,8 +26,8 @@ AOT_O := $(addprefix $(AOT_DIR)/, $(TEST_AOT))
 WASM_ACC_O := $(addsuffix .accinst, $(WASM_O))
 AOT_ACC_O := $(addsuffix .accinst, $(AOT_O))
 
-# TSV instrumented files
-SHARED_ACC_BINS := $(notdir $(wildcard $(SHARED_ACC_DIR)/*.shared_acc.bin))
+# TSV instrumented files (ignore part access files, if they exist)
+SHARED_ACC_BINS := $(notdir $(filter-out $(wildcard $(SHARED_ACC_DIR)/part*.shared_acc.bin), $(wildcard $(SHARED_ACC_DIR)/*.shared_acc.bin)))
 WASM_TSV_O := $(addprefix $(WASM_DIR)/, $(SHARED_ACC_BINS:.shared_acc.bin=.wasm.tsvinst))
 AOT_TSV_O := $(addprefix $(AOT_DIR)/, $(SHARED_ACC_BINS:.shared_acc.bin=.aot.tsvinst))
 
@@ -100,13 +100,8 @@ tsv: base $(AOT_TSV_O)
 # No support for Part file in TSV; convert it to a batch file
 .ONESHELL:
 $(WASM_DIR)/batch.%.wasm.tsvinst: $(SHARED_ACC_DIR)/batch.%.shared_acc.bin $(WASM_DIR)/%.wasm
-	./instrument -s memaccess-stochastic -a $< -o $@ $(WASM_DIR)/$*.wasm
+	./instrument -s memaccess -a $< -o $@ $(WASM_DIR)/$*.wasm
 	wasm2wat --enable-threads $@ -o $(WASM_DIR)/batch.$*.wat.tsvinst
-
-#$(WASM_DIR)/part1.%.wasm.tsvinst: $(SHARED_ACC_DIR)/part1.%.shared_acc.bin $(WASM_DIR)/%.wasm
-#	./instrument -s memshared -a $< -o $@ $(WASM_DIR)/$*.wasm
-#	wasm2wat --enable-threads $@ -o $(WASM_DIR)/part1.$*.wat.tsvinst
-
 
 
 
@@ -149,7 +144,7 @@ $(AOT_DIR)/%.aot.tsvinst: $(WASM_DIR)/%.wasm.tsvinst
 
 .SECONDARY: $(WASM_TSV_O)
 $(WASM_DIR)/%.wasm.tsvinst: $(SHARED_ACC_DIR)/%.shared_acc.bin $(WASM_DIR)/%.wasm 
-	./instrument -s memshared -a $< -o $@ $(WASM_DIR)/$*.wasm
+	./instrument -s memaccess -a $< -o $@ $(WASM_DIR)/$*.wasm
 	wasm2wat --enable-threads $@ -o $(WASM_DIR)/$*.wat.tsvinst
 
 

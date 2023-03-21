@@ -167,8 +167,24 @@ def aggregate_bins(bin_paths, out_path):
 
 
 # Instance runs for each mode
-def run_inst_tsv(exec_path):
-    pass
+def run_inst_tsv(exec_path, header=True):
+    fpath = str(exec_path)
+    if header:
+        print (f"--> Test {fpath} <--")
+    #result = subprocess.run(f"iwasm --native-lib=./libaccess.so {fpath}",
+    #        shell=True, check=True, capture_output=True, text=True,
+    #        universal_newlines=True)
+    #filename = '.'.join(exec_path.name.split('.')[:-2])
+    #bin_target = shared_acc_dir / Path(filename + '.shared_acc.bin')
+    #subprocess.run(f"mkdir -p {shared_acc_dir}; "
+    #        f"mv shared_mem.bin {str(bin_target)}", shell=True)
+    #
+    #time_str = re.search("Time:\s*(.*)", result.stderr).group(1)
+
+    #postprocessor (exec_path, bin_target)
+    #
+    #return time_str
+    return 0
 
 
 def postprocess_access(exec_path, out_path):
@@ -208,7 +224,7 @@ def run_inst_normal(exec_path):
 
 
 # Batch runs for each mode
-def run_batch_test (test_name, batch_size, run_inst):
+def run_batch_access_test (test_name, batch_size, run_inst):
     print(f"--> Batch: {test_name} <--")
     run_times = []
     for part_file in sorted(aot_dir.glob(f"part*.{test_name}.aot.accinst")):
@@ -228,9 +244,6 @@ def run_batch_test (test_name, batch_size, run_inst):
     try:
         single_result = shared_acc_dir / f"{test_name}.shared_acc.bin"
         optimal_size = single_result.stat().st_size // 4
-        #with open(single_result, 'rb') as f:
-        #    ct_bytes = f.read(4)
-        #    optimal_size, = struct.unpack("<I", ct_bytes)
         print("Accuracy: {:.2f}".format((len(sorted_idxs) / optimal_size) * 100))
     except OSError:
         print("Accuracy: N/A")
@@ -253,7 +266,7 @@ def run_access(args, run_inst):
                             else args.files
 
         for test_name in sorted(test_names):
-            run_batch_test (test_name, args.batch, run_inst)
+            run_batch_access_test (test_name, args.batch, run_inst)
     
     else:
         file_args = [f for f in aot_dir.glob('*.aot.accinst') \
@@ -266,8 +279,18 @@ def run_access(args, run_inst):
 
 
 def run_tsv(args, run_inst):
-    pass
+    if args.batch:
+        raise RuntimeError("TSV does not support batch yet")
+    else:
+        # Use batch file over normal file, if it exists
+        file_args = [f for f in aot_dir.glob('*.aot.tsvinst') \
+                        if file_type(f) == "batch" or 
+                            (file_type(f) == "norm" and not (f.parent/f"batch.{f.name}").is_file())] \
+                        if args.files[0] == "all" \
+                        else [Path(f) for f in args.files]
 
+        for file_arg in sorted(file_args):
+            print("Time: ", run_inst(file_arg))
 
 # Mappings
 run_scripts = {

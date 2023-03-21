@@ -16,7 +16,7 @@
 #define TRACE_ACCESS 0
 #define TRACE_VIOLATION 0
 
-#define DELAY 500
+#define DELAY 1500
 
 /* Timing */
 uint64_t start_ts;
@@ -74,7 +74,7 @@ size_t table_size = sizeof(tsv_entry) * ((size_t)1 << 32);
 struct inst_entry {
   std::atomic_llong freq;
 };
-std::vector<inst_entry> instruction_map;
+//inst_entry* instruction_map = NULL;
 /*  */
 
 
@@ -130,7 +130,7 @@ void logaccess_wrapper(wasm_exec_env_t exec_env, uint32_t addr, uint32_t opcode,
     }
     entry->access_mtx.unlock();
   }
-  instruction_map[inst_idx].freq++;
+  //instruction_map[inst_idx].freq++;
   #endif
 }
 
@@ -139,16 +139,17 @@ void logend_wrapper(wasm_exec_env_t exec_env) {
   end_ts = gettime();
   float total_time = (float)(end_ts - start_ts) / 1000000; 
   printf("========= LOGEND ===========\n");
-  printf("Time: %.3f\n", total_time);
+  fprintf(stderr, "Time: %.3f\n", total_time);
 
   #if INSTRUMENT == 1
-  printf("Violations: %lu\n", violation_set.size());
+  FILE* vfile = fopen("violations.bin", "w");
+  fprintf(vfile, "Violations: %lu\n", violation_set.size());
   int i = 0;
   for (auto &violation : violation_set) {
-    printf("Addr [%-10u] by instructions [%-22s, %-22s] --> (%-8u, %-8u) | %d %d\n", 
+    fprintf(vfile, "Instructions (%-8u, %-8u) at Addr [%-10u]  --> [%-22s, %-22s] | %d %d\n", 
+            violation.first.inst_idx, violation.second.inst_idx, 
             violation.first.addr,
             opcode_access[violation.first.opcode].mnemonic, opcode_access[violation.second.opcode].mnemonic,
-            violation.first.inst_idx, violation.second.inst_idx, 
             violation.first.tid == violation.second.tid,
             violation.first.addr != violation.second.addr);
   }
@@ -177,8 +178,7 @@ void logstart_wrapper(wasm_exec_env_t exec_env, uint32_t max_instructions) {
   if (first.exchange(true) == false) {
     init_tsv_table();
     printf("Max instructions: %u\n", max_instructions);
-    std::vector<inst_entry> inst_map_temp(max_instructions);
-    instruction_map = std::move(inst_map_temp);
+    //instruction_map = new inst_entry[max_instructions];
     init_done = true;
     start_ts = gettime();
   } 
