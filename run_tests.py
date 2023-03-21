@@ -9,6 +9,7 @@ from argparse import ArgumentParser
 from collections import namedtuple
 
 shared_acc_dir = Path('shared_access')
+violation_dir = Path('violation_logs')
 aot_dir = Path('aots')
 
 run_modes = ["normal", "access", "tsv"]
@@ -171,20 +172,17 @@ def run_inst_tsv(exec_path, header=True):
     fpath = str(exec_path)
     if header:
         print (f"--> Test {fpath} <--")
-    #result = subprocess.run(f"iwasm --native-lib=./libaccess.so {fpath}",
-    #        shell=True, check=True, capture_output=True, text=True,
-    #        universal_newlines=True)
-    #filename = '.'.join(exec_path.name.split('.')[:-2])
-    #bin_target = shared_acc_dir / Path(filename + '.shared_acc.bin')
-    #subprocess.run(f"mkdir -p {shared_acc_dir}; "
-    #        f"mv shared_mem.bin {str(bin_target)}", shell=True)
-    #
-    #time_str = re.search("Time:\s*(.*)", result.stderr).group(1)
+    result = subprocess.run(f"iwasm --native-lib=./libtsvd.so {fpath}",
+            shell=True, check=True, capture_output=True, text=True,
+            universal_newlines=True)
+    filename = '.'.join(exec_path.name.split('.')[:-2])
+    res_target = violation_dir / Path(filename + '.violation')
+    subprocess.run(f"mkdir -p {violation_dir}; "
+            f"mv violations.bin {str(res_target)}", shell=True)
+    
+    time_str = re.search("Time:\s*(.*)", result.stderr).group(1)
 
-    #postprocessor (exec_path, bin_target)
-    #
-    #return time_str
-    return 0
+    return time_str
 
 
 def postprocess_access(exec_path, out_path):
