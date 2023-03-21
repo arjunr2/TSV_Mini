@@ -100,7 +100,7 @@ tsv: base $(AOT_TSV_O)
 # No support for Part file in TSV; convert it to a batch file
 .ONESHELL:
 $(WASM_DIR)/batch.%.wasm.tsvinst: $(SHARED_ACC_DIR)/batch.%.shared_acc.bin $(WASM_DIR)/%.wasm
-	./instrument -s memshared -a $< -o $@ $(WASM_DIR)/$*.wasm
+	./instrument -s memaccess-stochastic -a $< -o $@ $(WASM_DIR)/$*.wasm
 	wasm2wat --enable-threads $@ -o $(WASM_DIR)/batch.$*.wat.tsvinst
 
 #$(WASM_DIR)/part1.%.wasm.tsvinst: $(SHARED_ACC_DIR)/part1.%.shared_acc.bin $(WASM_DIR)/%.wasm

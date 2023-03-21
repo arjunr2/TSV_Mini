@@ -43,9 +43,10 @@ def merge_write_and_clean(sorted_ints, bin_path_list, out_path):
         for int_val in sorted_ints:
             outfile.write(struct.pack('<i', int_val))
 
-    # Remove files
+    # Remove files (unless writing to same file as reading)
     for bin_path in bin_path_list:
-        bin_path.unlink()
+        if bin_path != out_path:
+            bin_path.unlink()
     
 
 AccessRecord = namedtuple('AccessRecord', ['tid', 'has_write', 'inst_idxs'])
@@ -129,12 +130,17 @@ def merge_access_bins(bin_paths, out_path):
                     else:
                         partials[addr] = acc_record
 
+    #print("Len: ", len(shared_idxs))
+    #print("Shared Idxs: ", shared_idxs)
+    #print("Shared Addrs: ", shared_addrs)
+    #print("Partials: ", partials)
     # Write merge and remove partitions
     merge_write_and_clean(shared_idxs, bin_path_list, out_path)
 
     return shared_idxs
 
 
+# Legacy aggregator: Use merge_access_bins
 def aggregate_bins(bin_paths, out_path):
 
     bin_path_list = list(bin_paths)
@@ -164,7 +170,12 @@ def aggregate_bins(bin_paths, out_path):
 def run_inst_tsv(exec_path):
     pass
 
-def run_inst_access(exec_path, header=True):
+
+def postprocess_access(exec_path, out_path):
+    merge_access_bins ([out_path], out_path)
+
+def run_inst_access(exec_path, header=True, \
+                            postprocessor = lambda exec_path, out_path: None):
     fpath = str(exec_path)
     if header:
         print (f"--> Test {fpath} <--")
@@ -177,6 +188,8 @@ def run_inst_access(exec_path, header=True):
             f"mv shared_mem.bin {str(bin_target)}", shell=True)
     
     time_str = re.search("Time:\s*(.*)", result.stderr).group(1)
+
+    postprocessor (exec_path, bin_target)
     
     return time_str
 
@@ -214,9 +227,10 @@ def run_batch_test (test_name, batch_size, run_inst):
     # Print accuracy if possible
     try:
         single_result = shared_acc_dir / f"{test_name}.shared_acc.bin"
-        with open(single_result, 'rb') as f:
-            ct_bytes = f.read(4)
-            optimal_size, = struct.unpack("<I", ct_bytes)
+        optimal_size = single_result.stat().st_size // 4
+        #with open(single_result, 'rb') as f:
+        #    ct_bytes = f.read(4)
+        #    optimal_size, = struct.unpack("<I", ct_bytes)
         print("Accuracy: {:.2f}".format((len(sorted_idxs) / optimal_size) * 100))
     except OSError:
         print("Accuracy: N/A")
@@ -247,7 +261,8 @@ def run_access(args, run_inst):
                         else [Path(f) for f in args.files]
 
         for file_arg in sorted(file_args):
-            print("Time: ", run_inst(file_arg))
+            print("Time: ", run_inst(file_arg, header=True, \
+                                postprocessor = postprocess_access))
 
 
 def run_tsv(args, run_inst):
