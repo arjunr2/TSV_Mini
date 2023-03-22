@@ -14,6 +14,20 @@ aot_dir = Path('aots')
 
 run_modes = ["normal", "access", "tsv"]
 
+class ViolationPair():
+    def __init__(self, i1, i2):
+        self.i1 = i1
+        self.i2 = i2
+
+    def __eq__(self, other):
+        return  (self.i1 == other.i1 and self.i2 == other.i2) or \
+                (self.i1 == other.i2 and self.i2 == other.i1)
+
+    def __hash__(self):
+        return hash((self.i1, self.i2)) ^ hash((self.i2, self.i1))
+
+
+
 def _parse_main():
     p = ArgumentParser(
             description="Shared access instrumentation script")
@@ -45,18 +59,26 @@ def clean_files (fpath_list, out_path):
         if fpath != out_path:
             fpath.unlink()
 
+
+    
+
 def merge_tsv_violations (violation_paths, out_path):
     vpath_list = list(violation_paths)
 
     violation_ct = 0
-    violations_merged = []
+    violations_merged = {}
+    comp_str = r"Instructions \((\d+)\s*,\s*(\d+)\s*\)"
+    total_len = 0
     for vpath in vpath_list:
         with open(vpath, 'r') as f:
             content = f.readlines()
-            violations_merged += content
+            total_len += len(content)
+            violations_merged.update ( \
+                { ViolationPair(*re.search(comp_str, line).group(1,2)) : line \
+                for line in content } )
 
     with open(out_path, 'w') as outfile:
-        outfile.writelines(violations_merged)
+        outfile.writelines(violations_merged.values())
 
     clean_files (vpath_list, out_path)
 
