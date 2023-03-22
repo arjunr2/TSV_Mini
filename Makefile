@@ -100,8 +100,7 @@ $(WASM_DIR)/part1.%.wasm.accinst: $(WASM_DIR)/%.wasm
 tsv: base $(AOT_TSV_O)
 	mkdir -p $(VIOLATION_DIR)
 
-$(info $(AOT_TSV_BATCH_O))
-tsv-batch: base $(AOT_TSV_BATCH_O)
+tsv-batch: $(AOT_TSV_BATCH_O)
 	mkdir -p $(VIOLATION_DIR)
 
 # Input file can be:
