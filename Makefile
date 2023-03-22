@@ -42,6 +42,12 @@ TEST_AOT_ACC_BATCH := $(TEST_WASM_ACC_BATCH:.wasm.accinst=.aot.accinst)
 WASM_ACC_BATCH_O := $(addprefix $(WASM_DIR)/, $(TEST_WASM_ACC_BATCH))
 AOT_ACC_BATCH_O := $(addprefix $(AOT_DIR)/, $(TEST_AOT_ACC_BATCH))
 
+TEST_WASM_TSV_BATCH := $(foreach idx, $(BATCH_RANGE), $(addprefix part$(idx)., $(SHARED_ACC_BINS:.shared_acc.bin=.wasm.tsvinst)))
+TEST_AOT_TSV_BATCH := $(TEST_WASM_TSV_BATCH:.wasm.tsvinst=.aot.tsvinst)
+
+WASM_TSV_BATCH_O := $(addprefix $(WASM_DIR)/, $(TEST_WASM_TSV_BATCH))
+AOT_TSV_BATCH_O := $(addprefix $(AOT_DIR)/, $(TEST_AOT_TSV_BATCH))
+
 # Stochasticity param
 STOCH := 60
 
@@ -94,6 +100,10 @@ $(WASM_DIR)/part1.%.wasm.accinst: $(WASM_DIR)/%.wasm
 tsv: base $(AOT_TSV_O)
 	mkdir -p $(VIOLATION_DIR)
 
+$(info $(AOT_TSV_BATCH_O))
+tsv-batch: base $(AOT_TSV_BATCH_O)
+	mkdir -p $(VIOLATION_DIR)
+
 # Input file can be:
 # A normal single file: Handled by default
 # Batch file: Overriden here since they instrument the original file
@@ -103,6 +113,25 @@ $(WASM_DIR)/batch.%.wasm.tsvinst: $(SHARED_ACC_DIR)/batch.%.shared_acc.bin $(WAS
 	./instrument -s memaccess -a $< -o $@ $(WASM_DIR)/$*.wasm
 	wasm2wat --enable-threads $@ -o $(WASM_DIR)/batch.$*.wat.tsvinst
 
+
+# Generate partitions on access batch file
+.SECONDARY: $(WASM_TSV_BATCH_O)
+.ONESHELL:
+$(WASM_DIR)/part1.batch.%.wasm.tsvinst: $(SHARED_ACC_DIR)/batch.%.shared_acc.bin $(WASM_DIR)/%.wasm
+	./instrument -s memaccess-stochastic -a "$(STOCH) $(BATCH_SIZE) $<" -o $(WASM_DIR)/batch.$*.wasm.tsvinst $(WASM_DIR)/$*.wasm
+	for idx in $(BATCH_RANGE) ; do \
+		wasm2wat --enable-threads $(WASM_DIR)/part$$idx.batch.$*.wasm.tsvinst -o \
+		$(WASM_DIR)/part$$idx.batch.$*.wat.tsvinst;	\
+	done
+
+# Generate partitions on access normal files
+.ONESHELL:
+$(WASM_DIR)/part1.%.wasm.tsvinst: $(SHARED_ACC_DIR)/%.shared_acc.bin $(WASM_DIR)/%.wasm
+	./instrument -s memaccess-stochastic -a "$(STOCH) $(BATCH_SIZE) $<" -o $(WASM_DIR)/$*.wasm.tsvinst $(WASM_DIR)/$*.wasm
+	for idx in $(BATCH_RANGE) ; do \
+		wasm2wat --enable-threads $(WASM_DIR)/part$$idx.$*.wasm.tsvinst -o \
+		$(WASM_DIR)/part$$idx.$*.wat.tsvinst;	\
+	done
 
 
 ## BASE PHASE
