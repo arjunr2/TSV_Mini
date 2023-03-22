@@ -38,19 +38,41 @@ def file_type(s):
         return 'norm'
 
 
+# Merge commit operations
+def clean_files (fpath_list, out_path):
+    # Remove files (unless writing to same file as reading)
+    for fpath in fpath_list:
+        if fpath != out_path:
+            fpath.unlink()
+
+def merge_tsv_violations (violation_paths, out_path):
+    vpath_list = list(violation_paths)
+
+    violation_ct = 0
+    violations_merged = []
+    for vpath in vpath_list:
+        with open(vpath, 'r') as f:
+            content = f.readlines()
+            violations_merged += content
+
+    with open(out_path, 'w') as outfile:
+        outfile.writelines(violations_merged)
+
+    clean_files (vpath_list, out_path)
+
+    return len(violations_merged)
+
+
+# Merge processing operations
+AccessRecord = namedtuple('AccessRecord', ['tid', 'has_write', 'inst_idxs'])
+
 def merge_write_and_clean(sorted_ints, bin_path_list, out_path):
     # Write sorted and unique integers to new binary file
     with open(out_path, 'wb') as outfile:
         for int_val in sorted_ints:
             outfile.write(struct.pack('<i', int_val))
 
-    # Remove files (unless writing to same file as reading)
-    for bin_path in bin_path_list:
-        if bin_path != out_path:
-            bin_path.unlink()
-    
-
-AccessRecord = namedtuple('AccessRecord', ['tid', 'has_write', 'inst_idxs'])
+    clean_files(bin_path_list, out_path)
 
 def merge_access_bins(bin_paths, out_path):
     
@@ -226,8 +248,8 @@ def run_batch_access_test (test_name, batch_size, run_inst):
     print(f"--> Batch: {test_name} <--")
     run_times = []
     for part_file in sorted(aot_dir.glob(f"part*.{test_name}.aot.accinst")):
-        batch_id = int(part_file.name.split('.')[0][4:])
-        if batch_id <= batch_size:
+        part_id = int(part_file.name.split('.')[0][4:])
+        if part_id <= batch_size:
             run_times.append(float(run_inst(part_file, header=False)))
 
     out_path = shared_acc_dir / f"batch.{test_name}.shared_acc.bin"
@@ -245,6 +267,30 @@ def run_batch_access_test (test_name, batch_size, run_inst):
         print("Accuracy: {:.2f}".format((len(sorted_idxs) / optimal_size) * 100))
     except OSError:
         print("Accuracy: N/A")
+
+
+def run_batch_tsv_test (test_name, batch_size, run_inst):
+    print(f"--> Batch: {test_name} <--")
+    run_times = []
+    for part_file in sorted(aot_dir.glob(f"part*.{test_name}.aot.tsvinst")):
+        part_id = int(part_file.name.split('.')[0][4:])
+        if part_id <= batch_size:
+            run_times.append(float(run_inst(part_file, header=False)))
+
+    out_path = violation_dir / f"disp.{test_name}.violation"
+    # Aggregate results from run
+    num_violations = merge_tsv_violations ( violation_dir.glob(f"part*.{test_name}.violation"), \
+                        out_path)
+
+    print("Max Time: ", max(run_times))
+    # Print accuracy if possible
+    try:
+        single_result = violation_dir / f"{test_name}.violation"
+        with open(single_result, 'r') as f:
+            single_violations = len(f.readlines())
+        print("Relative Violations: {}".format(num_violations - single_violations))
+    except OSError:
+        print("Relative Violations: N/A")
 
 
 # Main run dispatchers
@@ -278,7 +324,15 @@ def run_access(args, run_inst):
 
 def run_tsv(args, run_inst):
     if args.batch:
-        raise RuntimeError("TSV does not support batch yet")
+        # Use only batch files for now
+        test_names = { '.'.join(part_file.name.split('.')[1:3]) \
+                            for part_file in aot_dir.glob(f"part*.aot.tsvinst") \
+                            if part_file.name.split('.')[1] == "batch" } \
+                        if args.files[0] == "all" \
+                        else args.files
+        for test_name in sorted(test_names):
+            run_batch_tsv_test (test_name, args.batch, run_inst)
+
     else:
         # Use batch file over normal file, if it exists
         file_args = [f for f in aot_dir.glob('*.aot.tsvinst') \

@@ -16,7 +16,7 @@
 #define TRACE_ACCESS 0
 #define TRACE_VIOLATION 0
 
-#define DELAY 1500
+#define DELAY 500
 
 /* Timing */
 uint64_t start_ts;
@@ -143,7 +143,7 @@ void logend_wrapper(wasm_exec_env_t exec_env) {
 
   #if INSTRUMENT == 1
   FILE* vfile = fopen("violations.bin", "w");
-  fprintf(vfile, "Violations: %lu\n", violation_set.size());
+  //fprintf(vfile, "Violations: %lu\n", violation_set.size());
   int i = 0;
   for (auto &violation : violation_set) {
     fprintf(vfile, "Instructions (%-8u, %-8u) at Addr [%-10u]  --> [%-22s, %-22s] | %d %d\n", 
