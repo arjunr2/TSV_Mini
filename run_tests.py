@@ -239,7 +239,7 @@ def run_inst_access(exec_path, header=True, \
         print (f"--> Test {fpath} <--")
     result = subprocess.run(f"iwasm --native-lib=./libaccess.so {fpath}",
             shell=True, check=True, capture_output=True, text=True,
-            universal_newlines=True)
+            universal_newlines=True, executable='/bin/bash')
     filename = '.'.join(exec_path.name.split('.')[:-2])
     bin_target = shared_acc_dir / Path(filename + '.shared_acc.bin')
     subprocess.run(f"mkdir -p {shared_acc_dir}; "
