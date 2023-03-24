@@ -318,7 +318,7 @@ def run_batch_tsv_test (test_name, batch_size, run_inst):
 # Main run dispatchers
 def run_normal(args, run_inst):
     file_args = aot_dir.glob('*.aot') if args.files[0] == "all" \
-                    else [Path(f) for f in args.files]
+                    else [aot_dir / Path(f+'.aot') for f in args.files]
 
     for file_arg in sorted(file_args):
         print("Time: ", run_inst(file_arg))
@@ -337,7 +337,7 @@ def run_access(args, run_inst):
     else:
         file_args = [f for f in aot_dir.glob('*.aot.accinst') \
                         if file_type(f) == "norm"] if args.files[0] == "all" \
-                        else [Path(f) for f in args.files]
+                        else [aot_dir / Path(f+'.aot.accinst') for f in args.files]
 
         for file_arg in sorted(file_args):
             print("Time: ", run_inst(file_arg, header=True, \
@@ -361,7 +361,7 @@ def run_tsv(args, run_inst):
                         if file_type(f) == "batch" or 
                             (file_type(f) == "norm" and not (f.parent/f"batch.{f.name}").is_file())] \
                         if args.files[0] == "all" \
-                        else [Path(f) for f in args.files]
+                        else [aot_dir / Path(f+'.aot.tsvinst') for f in args.files]
 
         for file_arg in sorted(file_args):
             print("Time: ", run_inst(file_arg))
