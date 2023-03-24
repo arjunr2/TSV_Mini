@@ -257,7 +257,7 @@ def run_inst_normal(exec_path):
     print (f"--> Test {fpath} <--")
     result = subprocess.run(f"time iwasm {fpath}",
             shell=True, check=True, capture_output=True, text=True,
-            universal_newlines=True)
+            universal_newlines=True, executable='/bin/bash')
 
     mins, secs = re.search("real\s*(.*)m(.*)s", result.stderr).group(1, 2)
     exec_time = float(mins) * 60 + float(secs)
@@ -346,7 +346,7 @@ def run_access(args, run_inst):
 
 def run_tsv(args, run_inst):
     if args.batch:
-        # Use only batch files for now
+        # Does not work with both batch access files and normal access files for now
         test_names = { '.'.join(part_file.name.split('.')[1:3]) \
                             for part_file in aot_dir.glob(f"part*.aot.tsvinst") \
                             if part_file.name.split('.')[1] == "batch" } \
