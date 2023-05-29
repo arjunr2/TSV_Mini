@@ -8,7 +8,7 @@ WAMRC=$WAMR_ROOT/wamr-compiler/build/wamrc
 
 name=$(basename $1 .c)
 
-/opt/wasi-sdk-16/bin/clang --target=wasm32-wasi \
+/opt/wasi-sdk-20/bin/clang --target=wasm32-wasi-threads \
     -O3 -pthread       \
     -Wl,--shared-memory             \
     -Wl,--allow-undefined,--no-check-features \
@@ -22,9 +22,3 @@ name=$(basename $1 .c)
 
 wasm2wat --enable-threads $name.wasm -o $name.wat
 $WAMRC --enable-multi-thread -o $name.aot $name.wasm
-$WAMRC --target=aarch64 --enable-multi-thread -o $name-arm64.aot $name.wasm
-
-./instrument -o out.wasm $name.wasm
-$WAMRC --enable-multi-thread -o out.aot out.wasm
-$WAMRC --target=aarch64 --enable-multi-thread -o out-arm64.aot out.wasm
-
