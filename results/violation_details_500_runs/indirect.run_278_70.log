@@ -1,0 +1,3 @@
+Instructions (8       , 10      ) at Addr [42080     ]  --> [f64_store             , f64_store             ] | 0 0
+Instructions (10      , 7       ) at Addr [42080     ]  --> [f64_store             , f64_load              ] | 0 0
+Instructions (9       , 8       ) at Addr [42080     ]  --> [f64_load              , f64_store             ] | 0 0

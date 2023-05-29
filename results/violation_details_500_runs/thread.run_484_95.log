@@ -1,0 +1,11 @@
+Instructions (20      , 19      ) at Addr [1128      ]  --> [i32_store             , i32_load              ] | 0 0
+Instructions (15      , 14      ) at Addr [1128      ]  --> [i32_store             , i32_load              ] | 0 0
+Instructions (15      , 20      ) at Addr [1128      ]  --> [i32_store             , i32_store             ] | 0 0
+Instructions (19      , 15      ) at Addr [1128      ]  --> [i32_load              , i32_store             ] | 0 0
+Instructions (17      , 17      ) at Addr [1112      ]  --> [i64_store             , i64_store             ] | 0 0
+Instructions (18      , 18      ) at Addr [1104      ]  --> [i64_store             , i64_store             ] | 0 0
+Instructions (16      , 16      ) at Addr [1120      ]  --> [i32_store             , i32_store             ] | 0 0
+Instructions (15      , 15      ) at Addr [1128      ]  --> [i32_store             , i32_store             ] | 0 0
+Instructions (20      , 20      ) at Addr [1128      ]  --> [i32_store             , i32_store             ] | 0 0
+Instructions (20      , 14      ) at Addr [1128      ]  --> [i32_store             , i32_load              ] | 0 0
+Instructions (15      , 5       ) at Addr [1128      ]  --> [i32_store             , i32_store             ] | 0 0

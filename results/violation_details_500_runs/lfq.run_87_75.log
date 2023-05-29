@@ -1,0 +1,9 @@
+Instructions (29      , 38      ) at Addr [32392     ]  --> [i64_store             , i64_store             ] | 0 0
+Instructions (27      , 13      ) at Addr [33296     ]  --> [i64_store             , i64_load              ] | 0 0
+Instructions (45      , 56      ) at Addr [32800     ]  --> [i64_load              , i64_store             ] | 0 0
+Instructions (29      , 29      ) at Addr [32392     ]  --> [i64_store             , i64_store             ] | 0 0
+Instructions (31      , 31      ) at Addr [32416     ]  --> [i64_store             , i64_store             ] | 0 0
+Instructions (46      , 42      ) at Addr [32256     ]  --> [i64_atomic_rmw_cmpxchg, i64_load              ] | 0 0
+Instructions (14      , 10      ) at Addr [32128     ]  --> [i64_atomic_rmw_cmpxchg, i64_load              ] | 0 0
+Instructions (29      , 28      ) at Addr [32392     ]  --> [i64_store             , i64_load              ] | 0 0
+Instructions (31      , 30      ) at Addr [32416     ]  --> [i64_store             , i64_load              ] | 0 0

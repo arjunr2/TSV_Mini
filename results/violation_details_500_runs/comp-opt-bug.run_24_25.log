@@ -1,0 +1,2 @@
+Instructions (16      , 4       ) at Addr [1060      ]  --> [i32_store             , i32_load              ] | 0 0
+Instructions (16      , 10      ) at Addr [1060      ]  --> [i32_store             , i32_load              ] | 0 0

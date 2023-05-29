@@ -1,0 +1,2 @@
+Instructions (27      , 45      ) at Addr [33472     ]  --> [i64_store             , i64_load              ] | 0 0
+Instructions (45      , 56      ) at Addr [33424     ]  --> [i64_load              , i64_store             ] | 0 0

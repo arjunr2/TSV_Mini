@@ -1,0 +1,7 @@
+Instructions (5       , 4       ) at Addr [1072      ]  --> [i32_store             , i32_store             ] | 0 0
+Instructions (7       , 6       ) at Addr [1072      ]  --> [i32_store             , i32_store             ] | 0 0
+Instructions (7       , 5       ) at Addr [1072      ]  --> [i32_store             , i32_store             ] | 0 0
+Instructions (4       , 7       ) at Addr [1072      ]  --> [i32_store             , i32_store             ] | 0 0
+Instructions (5       , 6       ) at Addr [1072      ]  --> [i32_store             , i32_store             ] | 0 0
+Instructions (7       , 7       ) at Addr [1072      ]  --> [i32_store             , i32_store             ] | 0 0
+Instructions (5       , 5       ) at Addr [1072      ]  --> [i32_store             , i32_store             ] | 0 0

@@ -1,0 +1,4 @@
+Instructions (13      , 27      ) at Addr [33616     ]  --> [i64_load              , i64_store             ] | 0 0
+Instructions (56      , 45      ) at Addr [33200     ]  --> [i64_store             , i64_load              ] | 0 0
+Instructions (10      , 14      ) at Addr [32128     ]  --> [i64_load              , i64_atomic_rmw_cmpxchg] | 0 0
+Instructions (42      , 46      ) at Addr [32256     ]  --> [i64_load              , i64_atomic_rmw_cmpxchg] | 0 0
